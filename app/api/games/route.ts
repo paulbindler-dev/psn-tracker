@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sql } from '@/lib/db'
+import { getSql } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
+  const sql = getSql()
   try {
     const rows = await sql`SELECT * FROM games ORDER BY added_at DESC`
     return NextResponse.json(rows)
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'title required' }, { status: 400 })
   }
 
+  const sql = getSql()
   try {
     const rows = await sql`
       INSERT INTO games (title, fr_product_id, kr_product_id)

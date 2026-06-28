@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sql } from '@/lib/db'
+import { getSql } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,6 +7,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const sql = getSql()
   try {
     await sql`DELETE FROM games WHERE id = ${params.id}`
     return new NextResponse(null, { status: 204 })
