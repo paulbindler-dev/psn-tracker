@@ -44,7 +44,7 @@ export function GameList() {
     const pb = prices[b.id]
     switch (sortKey) {
       case 'added_recent': return 0
-      case 'added_old':    return 1
+      case 'added_old':    return new Date(a.added_at).getTime() - new Date(b.added_at).getTime()
       case 'name_az': return a.title.localeCompare(b.title, 'fr')
       case 'name_za': return b.title.localeCompare(a.title, 'fr')
       case 'price_fr_asc':
