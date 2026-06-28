@@ -41,11 +41,19 @@ export interface PriceResult {
   krHasDemo: boolean
 }
 
+export interface User {
+  id: string
+  slug: string
+  name: string | null
+  currency: 'EUR' | 'KRW'
+}
+
 export interface Game {
   id: string
   title: string
   fr_product_id: string | null
   kr_product_id: string | null
+  user_id: string | null
   added_at: string
 }
 
