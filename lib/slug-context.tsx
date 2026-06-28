@@ -2,5 +2,9 @@
 import { createContext, useContext } from 'react'
 
 const SlugContext = createContext<string>('')
-export const SlugProvider = SlugContext.Provider
+
+export function SlugProvider({ children, value }: { children: React.ReactNode; value: string }) {
+  return <SlugContext.Provider value={value}>{children}</SlugContext.Provider>
+}
+
 export const useSlug = () => useContext(SlugContext)

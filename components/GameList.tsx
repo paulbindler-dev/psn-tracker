@@ -68,7 +68,7 @@ export function GameList() {
     fetch(`/api/users/${slug}`)
       .then((r) => r.ok ? r.json() : null)
       .then((user) => {
-        if (user?.currency) setCurrency(user.currency)
+        if (user?.currency === 'EUR' || user?.currency === 'KRW') setCurrency(user.currency)
       })
       .catch(() => {})
   }, [slug])
@@ -76,7 +76,9 @@ export function GameList() {
   const fetchGames = useCallback(async () => {
     if (!slug) return
     const res = await fetch(`/api/games?slug=${slug}`)
-    const data: Game[] = await res.json()
+    const raw = await res.json()
+    if (!Array.isArray(raw)) return
+    const data = raw as Game[]
     setGames(data)
     data.forEach((game, index) => {
       setTimeout(() => {
