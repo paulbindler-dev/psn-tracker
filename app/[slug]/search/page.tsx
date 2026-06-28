@@ -198,7 +198,10 @@ export default function SlugSearchPage() {
     setSelected(product)
     setPhase('confirming')
     try {
-      const res = await fetch(`/api/prices?title=${encodeURIComponent(product.name.split('(')[0].trim())}`)
+      const params = new URLSearchParams({ fr_id: product.id })
+      const clean = product.name.split('(')[0].trim()
+      params.append('title', clean)
+      const res = await fetch(`/api/prices?${params}`)
       if (!res.ok) {
         setComparison({ fr: null, kr: null, frHasDemo: false, krHasDemo: false })
         return
@@ -236,20 +239,33 @@ export default function SlugSearchPage() {
   }
 
   const handleQuickAdd = useCallback(async (product: PSNProduct) => {
+    const clean = product.name.split('(')[0].trim()
     try {
       const res = await fetch(`/api/games?slug=${encodeURIComponent(slug)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: product.name.split('(')[0].trim(),
-          fr_product_id: product.id,
-          kr_product_id: null,
-        }),
+        body: JSON.stringify({ title: clean, fr_product_id: product.id, kr_product_id: null }),
       })
-      if (!res.ok) {
-        setToast("Erreur lors de l'ajout")
-      } else {
+      if (!res.ok) { setToast("Erreur lors de l'ajout") }
+      else {
         setToast('Ajouté ✓')
+        const game = await res.json().catch(() => null)
+        if (game?.id) {
+          const params = new URLSearchParams({ fr_id: product.id, title: clean })
+          fetch(`/api/prices?${params}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(prices => {
+              const krId = prices?.kr?.id
+              if (krId) {
+                fetch(`/api/games/${game.id}?slug=${encodeURIComponent(slug)}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ kr_product_id: krId }),
+                }).catch(() => {})
+              }
+            })
+            .catch(() => {})
+        }
       }
     } catch {
       setToast('Erreur réseau')
