@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import Image from 'next/image'
+import { StarFour } from '@phosphor-icons/react'
 import { PriceResult, Game } from '@/lib/types'
 import { ActionSheet } from './ActionSheet'
 
@@ -190,8 +191,8 @@ export function GameCard({ game, prices, loading, onDelete, currency }: Props) {
               <>
                 {/* PS Plus row */}
                 {fr?.psPlusTier && (
-                  <p className="text-[13px] flex items-center gap-1" style={{ color: '#f0b400' }}>
-                    <span>✦</span>
+                  <p className="text-[13px] flex items-center gap-0.5" style={{ color: '#f0b400' }}>
+                    <StarFour size={11} weight="fill" color="#f0b400" />
                     <span>{fr.psPlusTier === 'PREMIUM' ? 'Premium' : 'Extra'}</span>
                   </p>
                 )}

@@ -70,7 +70,10 @@ export function parseNextDataHtml(html: string): PSNProduct[] {
       )
     )
     .map((p): PSNProduct => {
-      const branding: string[] = p.price?.serviceBranding ?? []
+      const branding: string[] =
+        (Array.isArray(p.price?.serviceBranding) ? p.price.serviceBranding as string[] : null) ??
+        (Array.isArray(p.serviceBranding) ? p.serviceBranding as string[] : null) ??
+        []
       return {
         id: p.id ?? '',
         suffix: (p.id ?? '').split('-').pop() ?? '',
@@ -89,4 +92,5 @@ export function parseNextDataHtml(html: string): PSNProduct[] {
         storeDisplayClassification: p.storeDisplayClassification ?? '',
       }
     })
+    .filter((p) => p.id !== '')
 }

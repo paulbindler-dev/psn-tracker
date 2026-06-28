@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { MagnifyingGlass, X } from '@phosphor-icons/react'
+import { MagnifyingGlass, X, StarFour } from '@phosphor-icons/react'
 import { useSlug } from '@/lib/slug-context'
 import { PSNProduct, PriceResult } from '@/lib/types'
 
@@ -95,8 +95,8 @@ function ProductRow({
             {product.name.split('(')[0].trim()}
           </p>
           {tier && (
-            <p className="text-[13px] flex items-center gap-1" style={{ color: '#f0b400' }}>
-              <span>✦</span><span>{tier}</span>
+            <p className="text-[13px] flex items-center gap-0.5" style={{ color: '#f0b400' }}>
+              <StarFour size={11} weight="fill" color="#f0b400" /><span>{tier}</span>
             </p>
           )}
           {(product.discountedPrice || product.basePrice) && (

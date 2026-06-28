@@ -183,4 +183,55 @@ describe('parseNextDataHtml', () => {
     const products = parseNextDataHtml(html)
     expect(products[0].serviceBranding).toContain('EXTRA')
   })
+
+  it('extracts serviceBranding at product level (fallback)', () => {
+    const html = `<script id="__NEXT_DATA__" type="application/json">
+{"props":{"apolloState":{
+  "Product:EP0000-TEST_00-PREMIUMTEST:fr-fr": {
+    "__typename": "Product",
+    "id": "EP0000-TEST_00-PREMIUMTEST",
+    "name": "Premium Test Game",
+    "npTitleId": "TEST_00",
+    "platforms": ["PS5"],
+    "storeDisplayClassification": "FULL_GAME",
+    "serviceBranding": ["PREMIUM"],
+    "price": {
+      "__typename": "SkuPrice",
+      "basePrice": "€9,99",
+      "discountedPrice": "€9,99",
+      "discountText": null,
+      "isFree": false
+    },
+    "media": [],
+    "personalizedMeta": null
+  }
+}}}</script>`
+    const products = parseNextDataHtml(html)
+    expect(products[0].serviceBranding).toContain('PREMIUM')
+  })
+
+  it('retourne tableau vide si aucun serviceBranding', () => {
+    const html = `<script id="__NEXT_DATA__" type="application/json">
+{"props":{"apolloState":{
+  "Product:EP0000-TEST_00-NOBRANDING:fr-fr": {
+    "__typename": "Product",
+    "id": "EP0000-TEST_00-NOBRANDING",
+    "name": "Regular Game",
+    "npTitleId": "TEST_00",
+    "platforms": ["PS5"],
+    "storeDisplayClassification": "FULL_GAME",
+    "price": {
+      "__typename": "SkuPrice",
+      "basePrice": "€59,99",
+      "discountedPrice": null,
+      "discountText": null,
+      "isFree": false
+    },
+    "media": [],
+    "personalizedMeta": null
+  }
+}}}</script>`
+    const products = parseNextDataHtml(html)
+    expect(products[0].serviceBranding).toEqual([])
+  })
 })
