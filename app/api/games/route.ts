@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { sql } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const { data, error } = await supabase
-    .from('games')
-    .select('*')
-    .order('added_at', { ascending: false })
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  try {
+    const rows = await sql`SELECT * FROM games ORDER BY added_at DESC`
+    return NextResponse.json(rows)
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -19,16 +18,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'title required' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
-    .from('games')
-    .insert({
-      title: body.title,
-      fr_product_id: body.fr_product_id ?? null,
-      kr_product_id: body.kr_product_id ?? null,
-    })
-    .select()
-    .single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data, { status: 201 })
+  try {
+    const rows = await sql`
+      INSERT INTO games (title, fr_product_id, kr_product_id)
+      VALUES (${body.title}, ${body.fr_product_id ?? null}, ${body.kr_product_id ?? null})
+      RETURNING *
+    `
+    return NextResponse.json(rows[0], { status: 201 })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
 }
