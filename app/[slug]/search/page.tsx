@@ -91,7 +91,7 @@ function ProductRow({
 
         {/* Text */}
         <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-          <p className="text-[15px] font-semibold leading-[1.3] line-clamp-2" style={{ color: 'var(--ink)' }}>
+          <p className="text-[15px] font-normal leading-[1.3] line-clamp-2" style={{ color: 'var(--ink)' }}>
             {product.name.split('(')[0].trim()}
           </p>
           {tier && (

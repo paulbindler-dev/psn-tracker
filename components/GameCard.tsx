@@ -170,7 +170,7 @@ export function GameCard({ game, prices, loading, onDelete, currency }: Props) {
           <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
             {/* Title */}
             <p
-              className="text-[15px] font-semibold leading-[1.3] line-clamp-2"
+              className="text-[15px] font-normal leading-[1.3] line-clamp-2"
               style={{ color: 'var(--ink)' }}
             >
               {game.title}
@@ -269,10 +269,10 @@ export function GameCard({ game, prices, loading, onDelete, currency }: Props) {
           </div>
         </button>
 
-        {/* Bottom separator */}
+        {/* Bottom separator — aligns with text (after cover) */}
         <div
-          className="absolute bottom-0 left-4 right-0 h-px"
-          style={{ backgroundColor: 'var(--sep)' }}
+          className="absolute bottom-0 right-0 h-px"
+          style={{ backgroundColor: 'var(--sep)', left: 96 }}
         />
       </div>
 

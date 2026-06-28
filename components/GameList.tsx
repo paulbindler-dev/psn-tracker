@@ -178,16 +178,8 @@ export function GameList() {
   return (
     <>
       {/* Header PSN */}
-      <div className="px-4 pt-6 pb-0">
-        <p className="text-[11px] font-bold tracking-widest uppercase" style={{ color: 'var(--muted)' }}>
-          PlayStation
-        </p>
-      </div>
-      <div className="flex items-center justify-between px-4 pt-1 pb-4">
-        <h1
-          className="text-[28px] font-bold"
-          style={{ color: 'var(--ink)' }}
-        >
+      <div className="flex items-center justify-between px-4 pt-6 pb-4">
+        <h1 className="text-[28px] font-bold" style={{ color: 'var(--ink)' }}>
           Liste de souhaits
         </h1>
         <div className="flex items-center gap-2">

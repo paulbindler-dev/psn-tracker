@@ -1,7 +1,26 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { GameController } from '@phosphor-icons/react'
+
+function PSMark({ size = 64 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      fill="white"
+      aria-hidden="true"
+    >
+      {/* Shadow P (forms the S in PS illusion) */}
+      <path
+        opacity="0.45"
+        d="M0 100 V58 Q0 30 28 26 V44 Q16 48 16 58 V100 Z"
+      />
+      {/* Main bold P */}
+      <path d="M30 0 V100 H46 V70 H68 Q100 70 100 35 Q100 0 68 0 Z M46 16 H68 Q84 16 84 35 Q84 54 68 54 H46 Z" />
+    </svg>
+  )
+}
 
 export default function HomePage() {
   const router = useRouter()
@@ -43,9 +62,9 @@ export default function HomePage() {
       <div className="mb-10 flex flex-col items-center gap-3">
         <div
           className="flex items-center justify-center rounded-2xl"
-          style={{ width: 72, height: 72, backgroundColor: '#0070d1' }}
+          style={{ width: 80, height: 80, background: 'linear-gradient(145deg, #0070d1 0%, #003087 100%)' }}
         >
-          <GameController size={40} color="white" weight="fill" />
+          <PSMark size={48} />
         </div>
         <h1
           className="text-[32px] font-bold tracking-tight"
