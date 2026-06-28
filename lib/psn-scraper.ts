@@ -21,6 +21,31 @@ export async function searchPSN(
   return parseNextDataHtml(await res.text())
 }
 
+export async function fetchProductById(
+  productId: string,
+  region: 'fr-fr' | 'ko-kr'
+): Promise<PSNProduct | null> {
+  const lang = region === 'fr-fr' ? 'fr-FR' : 'ko-KR'
+  const url = `https://store.playstation.com/${region}/product/${productId}`
+
+  const res = await fetch(url, {
+    headers: { ...PSN_HEADERS, 'Accept-Language': lang },
+    next: { revalidate: 3600 },
+  })
+
+  if (!res.ok) return null
+
+  const products = parseNextDataHtml(await res.text())
+  return (
+    products.find((p) => p.id === productId) ??
+    products.find((p) =>
+      ['FULL_GAME', 'GAME_BUNDLE', 'LEGACY_GAME'].includes(p.storeDisplayClassification)
+    ) ??
+    products[0] ??
+    null
+  )
+}
+
 export function parseNextDataHtml(html: string): PSNProduct[] {
   const match = html.match(
     /<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/

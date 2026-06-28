@@ -1,4 +1,4 @@
-import { parseNextDataHtml } from '@/lib/psn-scraper'
+import { parseNextDataHtml, fetchProductById } from '@/lib/psn-scraper'
 
 const SPIDER_MAN_2_FIXTURE = `
 <script id="__NEXT_DATA__" type="application/json">
@@ -38,6 +38,95 @@ const SPIDER_MAN_2_FIXTURE = `
   }
 }}}
 </script>`
+
+function buildFixtureWithProduct(p: {
+  id: string
+  storeDisplayClassification: string
+  name: string
+  platforms: string[]
+}): string {
+  return `<script id="__NEXT_DATA__" type="application/json">
+{"props":{"apolloState":{
+  "Product:${p.id}": {
+    "__typename": "Product",
+    "id": "${p.id}",
+    "name": "${p.name}",
+    "npTitleId": "TEST_00",
+    "platforms": ${JSON.stringify(p.platforms)},
+    "storeDisplayClassification": "${p.storeDisplayClassification}",
+    "price": {
+      "__typename": "SkuPrice",
+      "basePrice": "€59,99",
+      "discountedPrice": null,
+      "discountText": null,
+      "isFree": false,
+      "serviceBranding": []
+    },
+    "media": [],
+    "personalizedMeta": null
+  }
+}}}</script>`
+}
+
+describe('fetchProductById', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('retourne le produit exact quand lID matche', async () => {
+    const productId = 'EP0001-PPSA01619_00-MARVELSPIDERMAN2'
+    const fixture = buildFixtureWithProduct({
+      id: productId,
+      storeDisplayClassification: 'FULL_GAME',
+      name: 'Test Game',
+      platforms: ['PS5'],
+    })
+    global.fetch = jest.fn().mockResolvedValueOnce({ ok: true, text: async () => fixture })
+
+    const result = await fetchProductById(productId, 'fr-fr')
+    expect(result).not.toBeNull()
+    expect(result!.id).toBe(productId)
+    expect(result!.storeDisplayClassification).toBe('FULL_GAME')
+  })
+
+  it('retourne null si la page retourne 404', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({ ok: false, status: 404 })
+    const result = await fetchProductById('INVALID-ID', 'fr-fr')
+    expect(result).toBeNull()
+  })
+
+  it('construit la bonne URL pour fr-fr', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({ ok: false })
+    await fetchProductById('EP0001-TEST', 'fr-fr')
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://store.playstation.com/fr-fr/product/EP0001-TEST',
+      expect.any(Object)
+    )
+  })
+
+  it('construit la bonne URL pour ko-kr', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({ ok: false })
+    await fetchProductById('EP0001-TEST', 'ko-kr')
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://store.playstation.com/ko-kr/product/EP0001-TEST',
+      expect.any(Object)
+    )
+  })
+
+  it('retourne le premier FULL_GAME si lID exact ne matche pas', async () => {
+    const fixture = buildFixtureWithProduct({
+      id: 'EP0001-OTHER-ID',
+      storeDisplayClassification: 'FULL_GAME',
+      name: 'Another Game',
+      platforms: ['PS5'],
+    })
+    global.fetch = jest.fn().mockResolvedValueOnce({ ok: true, text: async () => fixture })
+
+    const result = await fetchProductById('EP0001-SEARCHED-ID', 'fr-fr')
+    expect(result).not.toBeNull()
+    expect(result!.storeDisplayClassification).toBe('FULL_GAME')
+  })
+})
 
 describe('parseNextDataHtml', () => {
   it('extracts FULL_GAME products only', () => {
