@@ -10,6 +10,18 @@ type Phase = 'idle' | 'searching' | 'results' | 'confirming' | 'adding'
 type PlatformFilter = 'all' | 'PS5' | 'PS4'
 interface SearchResults { games: PSNProduct[]; addons: PSNProduct[]; demos: PSNProduct[] }
 
+/* ── Toast ───────────────────────────────────────────────── */
+function Toast({ message }: { message: string }) {
+  return (
+    <div
+      className="fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full text-white text-[14px] font-medium z-50"
+      style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}
+    >
+      {message}
+    </div>
+  )
+}
+
 /* ── Empty state illustration ────────────────────────────── */
 function SearchEmptyState() {
   return (
@@ -41,9 +53,11 @@ function SearchEmptyState() {
 function ProductRow({
   product,
   onClick,
+  onQuickAdd,
 }: {
   product: PSNProduct
   onClick: () => void
+  onQuickAdd: () => void
 }) {
   const tier = product.serviceBranding.includes('PREMIUM')
     ? 'Premium'
@@ -52,66 +66,76 @@ function ProductRow({
     : null
 
   return (
-    <button
-      className="flex gap-3 px-4 py-3 w-full text-left active:opacity-70"
-      style={{ backgroundColor: 'var(--surface)' }}
-      onClick={onClick}
-    >
-      {/* Cover */}
-      <div className="relative flex-shrink-0 w-[68px] h-[68px] rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700">
-        {product.coverUrl ? (
-          <Image src={product.coverUrl} alt={product.name} fill className="object-cover" unoptimized />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-xs font-bold" style={{ color: 'var(--muted)' }}>
-            PS
-          </div>
-        )}
-        {product.platforms.length > 0 && (
-          <span className="absolute bottom-1 left-1 text-[10px] font-bold px-1 py-px bg-black/80 text-white rounded leading-none">
-            {product.platforms[0]}
-          </span>
-        )}
-      </div>
-
-      {/* Text */}
-      <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-        <p className="text-[15px] font-semibold leading-[1.3] line-clamp-2" style={{ color: 'var(--ink)' }}>
-          {product.name.split('(')[0].trim()}
-        </p>
-        {tier && (
-          <p className="text-[13px] flex items-center gap-1" style={{ color: '#f0b400' }}>
-            <span>✦</span><span>{tier}</span>
-          </p>
-        )}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {product.discountText && (
-            <span
-              className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white dark:bg-white/10"
-              style={{ backgroundColor: 'var(--promo-bg)' }}
-            >
-              {product.discountText}
-            </span>
+    <div className="flex items-stretch w-full" style={{ backgroundColor: 'var(--surface)' }}>
+      {/* Main clickable area */}
+      <button
+        className="flex gap-3 px-4 py-3 flex-1 min-w-0 text-left active:opacity-70"
+        onClick={onClick}
+      >
+        {/* Cover */}
+        <div className="relative flex-shrink-0 w-[68px] h-[68px] rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700">
+          {product.coverUrl ? (
+            <Image src={product.coverUrl} alt={product.name} fill className="object-cover" unoptimized />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-xs font-bold" style={{ color: 'var(--muted)' }}>
+              PS
+            </div>
           )}
-          {(product.discountedPrice || product.basePrice) && (
-            <span className="text-[15px] font-bold" style={{ color: 'var(--ink)' }}>
-              {product.discountedPrice ?? product.basePrice}
-            </span>
-          )}
-          {product.discountText && product.basePrice && (
-            <span className="text-[13px] line-through" style={{ color: 'var(--muted)' }}>
-              {product.basePrice}
+          {product.platforms.length > 0 && (
+            <span className="absolute bottom-1 left-1 text-[10px] font-bold px-1 py-px bg-black/80 text-white rounded leading-none">
+              {product.platforms[0]}
             </span>
           )}
         </div>
-      </div>
 
-      {/* Chevron */}
-      <div className="flex items-center self-center" style={{ color: 'var(--sep)' }}>
-        <svg width="8" height="14" viewBox="0 0 8 14" fill="none">
-          <path d="M1 1l6 6-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </div>
-    </button>
+        {/* Text */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+          <p className="text-[15px] font-semibold leading-[1.3] line-clamp-2" style={{ color: 'var(--ink)' }}>
+            {product.name.split('(')[0].trim()}
+          </p>
+          {tier && (
+            <p className="text-[13px] flex items-center gap-1" style={{ color: '#f0b400' }}>
+              <span>✦</span><span>{tier}</span>
+            </p>
+          )}
+          {(product.discountedPrice || product.basePrice) && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>FR</span>
+              {product.discountText && (
+                <span
+                  className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white dark:bg-white/10"
+                  style={{ backgroundColor: 'var(--promo-bg)' }}
+                >
+                  {product.discountText}
+                </span>
+              )}
+              <span className="text-[15px] font-bold" style={{ color: 'var(--ink)' }}>
+                {product.discountedPrice ?? product.basePrice}
+              </span>
+              {product.discountText && product.basePrice && (
+                <span className="text-[13px] line-through" style={{ color: 'var(--muted)' }}>
+                  {product.basePrice}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </button>
+
+      {/* Quick-add button */}
+      <button
+        className="flex items-center justify-center pr-4 flex-shrink-0 active:opacity-70"
+        onClick={onQuickAdd}
+        aria-label="Ajouter à ma liste"
+      >
+        <div
+          className="flex items-center justify-center"
+          style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#0070d1' }}
+        >
+          <span className="text-white font-medium" style={{ fontSize: 20, lineHeight: 1, marginTop: -1 }}>+</span>
+        </div>
+      </button>
+    </div>
   )
 }
 
@@ -126,6 +150,7 @@ export default function SlugSearchPage() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState<string | null>(null)
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all')
+  const [toast, setToast] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const doSearch = useCallback(async (q: string) => {
@@ -157,11 +182,11 @@ export default function SlugSearchPage() {
     }
   }, [])
 
-  /* Debounced search on input change */
+  /* Debounced search on input change — 300ms */
   const handleQueryChange = (val: string) => {
     setQuery(val)
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => doSearch(val), 500)
+    debounceRef.current = setTimeout(() => doSearch(val), 300)
   }
 
   useEffect(() => () => {
@@ -208,6 +233,28 @@ export default function SlugSearchPage() {
       setPhase('confirming')
     }
   }
+
+  const handleQuickAdd = useCallback(async (product: PSNProduct) => {
+    try {
+      const res = await fetch(`/api/games?slug=${encodeURIComponent(slug)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: product.name.split('(')[0].trim(),
+          fr_product_id: product.id,
+          kr_product_id: null,
+        }),
+      })
+      if (!res.ok) {
+        setToast("Erreur lors de l'ajout")
+      } else {
+        setToast('Ajouté ✓')
+      }
+    } catch {
+      setToast('Erreur réseau')
+    }
+    setTimeout(() => setToast(null), 2000)
+  }, [slug])
 
   /* Platform filter helper */
   const filterByPlatform = (items: PSNProduct[]) => {
@@ -262,18 +309,18 @@ export default function SlugSearchPage() {
               className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
               style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--sep)' }}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <circle cx="7" cy="7" r="5" stroke="var(--muted)" strokeWidth="1.5" fill="none"/>
-                <line x1="10.5" y1="10.5" x2="14" y2="14" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round"/>
+              <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
+                <circle cx="7.5" cy="7.5" r="5.5" stroke="var(--muted)" strokeWidth="1.5"/>
+                <path d="M12 12l3 3" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
               <input
-                type="search"
+                type="text"
                 value={query}
                 onChange={(e) => handleQueryChange(e.target.value)}
                 placeholder="Rechercher un jeu…"
                 autoFocus
-                className="flex-1 bg-transparent outline-none text-[15px] placeholder:text-[var(--muted)]"
-                style={{ color: 'var(--ink)' }}
+                className="flex-1 bg-transparent outline-none placeholder:text-[var(--muted)]"
+                style={{ color: 'var(--ink)', fontSize: '16px' }}
               />
               {query && (
                 <button
@@ -359,7 +406,11 @@ export default function SlugSearchPage() {
                         {i > 0 && (
                           <div className="h-px mx-4" style={{ backgroundColor: 'var(--sep)' }} />
                         )}
-                        <ProductRow product={product} onClick={() => handleSelect(product)} />
+                        <ProductRow
+                          product={product}
+                          onClick={() => handleSelect(product)}
+                          onQuickAdd={() => handleQuickAdd(product)}
+                        />
                       </div>
                     ))}
                   </div>
@@ -486,6 +537,9 @@ export default function SlugSearchPage() {
           </div>
         )}
       </div>
+
+      {/* ── Toast ──────────────────────────────────────────── */}
+      {toast && <Toast message={toast} />}
     </main>
   )
 }
