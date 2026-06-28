@@ -68,4 +68,30 @@ describe('parseNextDataHtml', () => {
   it('returns empty array when no __NEXT_DATA__ found', () => {
     expect(parseNextDataHtml('<html><body>nothing</body></html>')).toHaveLength(0)
   })
+
+  it('extracts serviceBranding from price object', () => {
+    const html = `<script id="__NEXT_DATA__" type="application/json">
+{"props":{"apolloState":{
+  "Product:EP0000-TEST_00-EXTRATEST00000000:fr-fr": {
+    "__typename": "Product",
+    "id": "EP0000-TEST_00-EXTRATEST00000000",
+    "name": "Extra Test Game",
+    "npTitleId": "TEST_00",
+    "platforms": ["PS5"],
+    "storeDisplayClassification": "FULL_GAME",
+    "price": {
+      "__typename": "SkuPrice",
+      "basePrice": "€9,99",
+      "discountedPrice": "€9,99",
+      "discountText": null,
+      "isFree": false,
+      "serviceBranding": ["EXTRA"]
+    },
+    "media": [],
+    "personalizedMeta": null
+  }
+}}}</script>`
+    const products = parseNextDataHtml(html)
+    expect(products[0].serviceBranding).toContain('EXTRA')
+  })
 })

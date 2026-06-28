@@ -24,8 +24,13 @@ export function GameList() {
       setTimeout(() => {
         setLoading((l) => ({ ...l, [game.id]: true }))
         fetch(`/api/prices?title=${encodeURIComponent(game.title)}`)
-          .then((r) => r.json())
-          .then((p: PriceResult) => setPrices((prev) => ({ ...prev, [game.id]: p })))
+          .then((r) => {
+            if (!r.ok) return null
+            return r.json()
+          })
+          .then((p: PriceResult | null) => {
+            if (p) setPrices((prev) => ({ ...prev, [game.id]: p }))
+          })
           .finally(() => setLoading((l) => ({ ...l, [game.id]: false })))
       }, index * 200)
     })

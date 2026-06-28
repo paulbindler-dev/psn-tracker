@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['image.api.playstation.com'],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'image.api.playstation.com' },
+    ],
   },
 }
 

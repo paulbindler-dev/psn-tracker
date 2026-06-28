@@ -44,24 +44,42 @@ export default function SearchPage() {
   const handleSelect = async (product: PSNProduct) => {
     setSelected(product)
     setPhase('confirming')
-    const res = await fetch(`/api/prices?title=${encodeURIComponent(product.name.split('(')[0].trim())}`)
-    const data: PriceResult = await res.json()
-    setComparison(data)
+    try {
+      const res = await fetch(`/api/prices?title=${encodeURIComponent(product.name.split('(')[0].trim())}`)
+      if (!res.ok) {
+        setComparison({ fr: null, kr: null, frHasDemo: false, krHasDemo: false })
+        return
+      }
+      const data: PriceResult = await res.json()
+      setComparison(data)
+    } catch {
+      setComparison({ fr: null, kr: null, frHasDemo: false, krHasDemo: false })
+    }
   }
 
   const handleAdd = async () => {
     if (!selected) return
     setPhase('adding')
-    await fetch('/api/games', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: selected.name.split('(')[0].trim(),
-        fr_product_id: selected.id,
-        kr_product_id: comparison?.kr?.id ?? null,
-      }),
-    })
-    router.push('/')
+    try {
+      const res = await fetch('/api/games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: selected.name.split('(')[0].trim(),
+          fr_product_id: selected.id,
+          kr_product_id: comparison?.kr?.id ?? null,
+        }),
+      })
+      if (!res.ok) {
+        setError("Erreur lors de l'ajout. Réessaie.")
+        setPhase('confirming')
+        return
+      }
+      router.push('/')
+    } catch {
+      setError("Erreur réseau lors de l'ajout.")
+      setPhase('confirming')
+    }
   }
 
   const kr = comparison?.kr
