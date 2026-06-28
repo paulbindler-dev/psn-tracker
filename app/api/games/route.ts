@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       VALUES (${body.title}, ${body.fr_product_id ?? null}, ${body.kr_product_id ?? null})
       RETURNING *
     `
-    return NextResponse.json(rows[0], { status: 201 })
+    return NextResponse.json((rows as any[])[0], { status: 201 })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
