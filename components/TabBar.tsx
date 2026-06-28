@@ -38,22 +38,40 @@ function SearchIcon({ active }: { active: boolean }) {
   )
 }
 
-export function TabBar() {
+function DemosIcon({ active }: { active: boolean }) {
+  const color = active ? '#0070d1' : '#8e8e93'
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      {/* Play button inside a screen */}
+      <rect x="3" y="5" width="18" height="13" rx="2.5" stroke={color} strokeWidth="1.6" fill="none"/>
+      <path d="M10 9.5l5 3-5 3V9.5z" fill={color}/>
+      <line x1="8" y1="20" x2="16" y2="20" stroke={color} strokeWidth="1.6" strokeLinecap="round"/>
+      <line x1="12" y1="18" x2="12" y2="20" stroke={color} strokeWidth="1.6" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+export function TabBar({ slug }: { slug: string }) {
   const path = usePathname()
-  const isSearch = path.startsWith('/search')
 
   const tabs = [
     {
-      href: '/',
+      href: `/${slug}`,
       label: 'Ma liste',
-      active: !isSearch,
+      active: path === `/${slug}`,
       Icon: ListIcon,
     },
     {
-      href: '/search',
+      href: `/${slug}/search`,
       label: 'Rechercher',
-      active: isSearch,
+      active: path.startsWith(`/${slug}/search`),
       Icon: SearchIcon,
+    },
+    {
+      href: `/${slug}/demos`,
+      label: 'Démos',
+      active: path.startsWith(`/${slug}/demos`),
+      Icon: DemosIcon,
     },
   ]
 
