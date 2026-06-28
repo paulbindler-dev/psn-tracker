@@ -251,6 +251,11 @@ export function GameCard({ game, prices, loading, onDelete, currency }: Props) {
                           ? `€${krEur.toFixed(2)}`
                           : (kr.discountedPrice ?? kr.basePrice)}
                     </span>
+                    {hasKrPromo && kr.basePrice && currency === 'KRW' && (
+                      <span className="text-[12px] line-through" style={{ color: 'var(--muted)' }}>
+                        {kr.basePrice}
+                      </span>
+                    )}
                     {saving != null && saving > 0 && (
                       <span className="text-[11px] font-bold bg-[#22c55e] text-white px-1.5 py-0.5 rounded">
                         -{saving}%

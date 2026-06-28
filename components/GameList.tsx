@@ -64,6 +64,7 @@ export function GameList() {
   const [sortKey, setSortKey] = useState<SortKey>('added_recent')
   const [showSort, setShowSort] = useState(false)
   const [currency, setCurrency] = useState<'EUR' | 'KRW'>('EUR')
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; game: Game; timer: ReturnType<typeof setTimeout> } | null>(null)
 
   // Charger la devise du user au démarrage
   useEffect(() => {
@@ -108,10 +109,37 @@ export function GameList() {
 
   useEffect(() => { fetchGames() }, [fetchGames])
 
-  const handleDelete = async (id: string) => {
-    await fetch(`/api/games/${id}`, { method: 'DELETE' })
-    setGames((g) => g.filter((game) => game.id !== id))
-    setPrices((p) => { const { [id]: _, ...rest } = p; return rest })
+  const handleDelete = (id: string) => {
+    const gameToDelete = games.find(g => g.id === id)
+    if (!gameToDelete) return
+
+    // Masquer localement immédiatement
+    setGames(g => g.filter(game => game.id !== id))
+
+    // Si un delete était déjà en attente, l'exécuter maintenant
+    if (pendingDelete) {
+      clearTimeout(pendingDelete.timer)
+      fetch(`/api/games/${pendingDelete.id}?slug=${slug}`, { method: 'DELETE' })
+      setPrices(p => { const { [pendingDelete.id]: _, ...rest } = p; return rest })
+    }
+
+    // Programmer le DELETE réel dans 3s
+    const timer = setTimeout(() => {
+      fetch(`/api/games/${id}?slug=${slug}`, { method: 'DELETE' })
+      setPendingDelete(null)
+      setPrices(p => { const { [id]: _, ...rest } = p; return rest })
+    }, 3000)
+
+    setPendingDelete({ id, game: gameToDelete, timer })
+  }
+
+  const handleUndoDelete = () => {
+    if (!pendingDelete) return
+    clearTimeout(pendingDelete.timer)
+    setGames(g => [...g, pendingDelete.game].sort((a, b) =>
+      new Date(b.added_at).getTime() - new Date(a.added_at).getTime()
+    ))
+    setPendingDelete(null)
   }
 
   const handleToggleCurrency = async () => {
@@ -219,6 +247,24 @@ export function GameList() {
           onChange={setSortKey}
           onClose={() => setShowSort(false)}
         />
+      )}
+
+      {pendingDelete && (
+        <div
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-3 rounded-xl z-50 shadow-lg"
+          style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--sep)' }}
+        >
+          <span className="text-[14px]" style={{ color: 'var(--ink)' }}>
+            Supprimé
+          </span>
+          <button
+            onClick={handleUndoDelete}
+            className="text-[14px] font-semibold"
+            style={{ color: '#0070d1' }}
+          >
+            Annuler
+          </button>
+        </div>
       )}
     </>
   )
