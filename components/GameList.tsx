@@ -12,10 +12,9 @@ function parseFrEur(priceStr: string | null | undefined): number {
   return parseFloat(priceStr.replace(/[^0-9,]/g, '').replace(',', '.')) || Infinity
 }
 
-function EmptyState() {
+function EmptyState({ slug }: { slug: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 px-8 gap-5">
-      {/* PS logo placeholder */}
       <svg width="72" height="72" viewBox="0 0 72 72" fill="none" aria-hidden="true">
         <rect width="72" height="72" rx="36" fill="none"/>
         <text
@@ -39,7 +38,7 @@ function EmptyState() {
         </p>
       </div>
       <Link
-        href="/search"
+        href={`/${slug}/search`}
         className="mt-2 px-6 py-3 rounded-xl text-[15px] font-semibold text-white"
         style={{ backgroundColor: '#0070d1' }}
       >
@@ -59,6 +58,9 @@ export function GameList() {
   const [showSort, setShowSort] = useState(false)
   const [currency, setCurrency] = useState<'EUR' | 'KRW'>('EUR')
   const [pendingDelete, setPendingDelete] = useState<{ id: string; game: Game; timer: ReturnType<typeof setTimeout> } | null>(null)
+
+  // Nettoyage timer undo delete au démontage
+  useEffect(() => () => { if (pendingDelete?.timer) clearTimeout(pendingDelete.timer) }, [pendingDelete])
 
   // Charger la devise du user au démarrage
   useEffect(() => {
@@ -225,7 +227,7 @@ export function GameList() {
       {/* List */}
       <div style={{ backgroundColor: 'var(--bg)' }}>
         {sorted.length === 0 ? (
-          <EmptyState />
+          <EmptyState slug={slug} />
         ) : (
           sorted.map((game) => (
             <GameCard

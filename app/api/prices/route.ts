@@ -4,6 +4,8 @@ import { matchProducts } from '@/lib/game-matcher'
 import { parseLangsFromKRTitle } from '@/lib/lang-parser'
 import { PriceResult, PSNProduct } from '@/lib/types'
 
+export const dynamic = 'force-dynamic'
+
 function parseKRWAmount(priceStr: string | null): number | null {
   if (!priceStr) return null
   const digits = priceStr.replace(/[^0-9]/g, '')
