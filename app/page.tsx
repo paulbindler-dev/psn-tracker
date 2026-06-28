@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { GameController } from '@phosphor-icons/react'
 
 export default function HomePage() {
   const router = useRouter()
@@ -40,23 +41,12 @@ export default function HomePage() {
     >
       {/* Logo */}
       <div className="mb-10 flex flex-col items-center gap-3">
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-          <rect width="64" height="64" rx="16" fill="#0070d1"/>
-          <path
-            d="M14 36C14 28.27 20.27 22 28 22h8c7.73 0 14 6.27 14 14v5c0 7.73-6.27 14-14 14h-8c-7.73 0-14-6.27-14-14V36z"
-            stroke="white"
-            strokeWidth="2.5"
-            fill="none"
-          />
-          <line x1="20" y1="37" x2="25" y2="37" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-          <line x1="22.5" y1="34.5" x2="22.5" y2="39.5" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-          <circle cx="42" cy="35" r="1.8" fill="white"/>
-          <circle cx="45" cy="38" r="1.8" fill="white"/>
-          <circle cx="39" cy="38" r="1.8" fill="white"/>
-          <circle cx="42" cy="41" r="1.8" fill="white"/>
-          <circle cx="26" cy="42" r="3" stroke="white" strokeWidth="1.8" fill="none"/>
-          <circle cx="37" cy="42" r="3" stroke="white" strokeWidth="1.8" fill="none"/>
-        </svg>
+        <div
+          className="flex items-center justify-center rounded-2xl"
+          style={{ width: 72, height: 72, backgroundColor: '#0070d1' }}
+        >
+          <GameController size={40} color="white" weight="fill" />
+        </div>
         <h1
           className="text-[32px] font-bold tracking-tight"
           style={{ color: 'var(--ink)' }}
