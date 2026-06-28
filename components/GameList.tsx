@@ -86,7 +86,12 @@ export function GameList() {
         setLoading((l) => ({ ...l, [game.id]: true }))
         const priceUrl =
           game.fr_product_id || game.kr_product_id
-            ? `/api/prices?fr_id=${game.fr_product_id ?? ''}&kr_id=${game.kr_product_id ?? ''}`
+            ? `/api/prices?${new URLSearchParams(
+                Object.fromEntries(
+                  Object.entries({ fr_id: game.fr_product_id, kr_id: game.kr_product_id })
+                    .filter(([, v]) => v != null) as [string, string][]
+                )
+              ).toString()}`
             : `/api/prices?title=${encodeURIComponent(game.title)}`
         fetch(priceUrl)
           .then((r) => {
