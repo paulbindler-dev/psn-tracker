@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { MagnifyingGlass, X } from '@phosphor-icons/react'
 import { useSlug } from '@/lib/slug-context'
 import { PSNProduct, PriceResult } from '@/lib/types'
 
@@ -309,10 +310,7 @@ export default function SlugSearchPage() {
               className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
               style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--sep)' }}
             >
-              <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
-                <circle cx="7.5" cy="7.5" r="5.5" stroke="var(--muted)" strokeWidth="1.5"/>
-                <path d="M12 12l3 3" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
+              <MagnifyingGlass size={17} color="var(--muted)" />
               <input
                 type="text"
                 value={query}
@@ -328,10 +326,7 @@ export default function SlugSearchPage() {
                   className="text-[var(--muted)] flex items-center justify-center w-5 h-5"
                   aria-label="Effacer"
                 >
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <circle cx="7" cy="7" r="7" fill="var(--muted)" opacity="0.4"/>
-                    <path d="M5 5l4 4M9 5l-4 4" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
-                  </svg>
+                  <X size={14} color="var(--muted)" />
                 </button>
               )}
             </div>

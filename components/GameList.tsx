@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { SortDescending } from '@phosphor-icons/react'
 import { Game, PriceResult, SortKey } from '@/lib/types'
 import { GameCard } from './GameCard'
 import { SortModal } from './SortModal'
@@ -48,13 +49,6 @@ function EmptyState() {
   )
 }
 
-function SortIcon() {
-  return (
-    <svg width="18" height="14" viewBox="0 0 18 14" fill="none" aria-hidden="true">
-      <path d="M1 1h16M1 7h10M1 13h6" stroke="#0070d1" strokeWidth="2" strokeLinecap="round"/>
-    </svg>
-  )
-}
 
 export function GameList() {
   const slug = useSlug()
@@ -180,7 +174,12 @@ export function GameList() {
   return (
     <>
       {/* Header PSN */}
-      <div className="flex items-center justify-between px-4 pt-6 pb-4">
+      <div className="px-4 pt-6 pb-0">
+        <p className="text-[11px] font-bold tracking-widest uppercase" style={{ color: 'var(--muted)' }}>
+          PlayStation
+        </p>
+      </div>
+      <div className="flex items-center justify-between px-4 pt-1 pb-4">
         <h1
           className="text-[28px] font-bold"
           style={{ color: 'var(--ink)' }}
@@ -218,7 +217,7 @@ export function GameList() {
             style={{ borderColor: '#0070d1' }}
             aria-label="Trier la liste"
           >
-            <SortIcon />
+            <SortDescending size={20} color="#0070d1" />
           </button>
         </div>
       </div>

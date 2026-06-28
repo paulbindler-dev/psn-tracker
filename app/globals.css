@@ -49,3 +49,16 @@ input, textarea, select {
     text-wrap: balance;
   }
 }
+
+/* PSN-exact typography */
+h1 {
+  letter-spacing: -0.02em;
+}
+
+/* Scrollbar invisible sur mobile */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
