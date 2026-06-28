@@ -1,8 +1,12 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { DM_Sans } from 'next/font/google'
 import './globals.css'
 
 const dmSans = DM_Sans({ subsets: ['latin'] })
+
+export const viewport: Viewport = {
+  themeColor: '#0D1B2A',
+}
 
 export const metadata: Metadata = {
   title: 'PSN Tracker',
@@ -13,7 +17,6 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: 'PSN Tracker',
   },
-  themeColor: '#0D1B2A',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
