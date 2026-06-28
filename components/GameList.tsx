@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Game, PriceResult, SortKey } from '@/lib/types'
 import { GameCard } from './GameCard'
 import { SortModal } from './SortModal'
+import { useSlug } from '@/lib/slug-context'
 
 function parseFrEur(priceStr: string | null | undefined): number {
   if (!priceStr) return Infinity
@@ -56,20 +57,38 @@ function SortIcon() {
 }
 
 export function GameList() {
+  const slug = useSlug()
   const [games, setGames] = useState<Game[]>([])
   const [prices, setPrices] = useState<Record<string, PriceResult | null>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [sortKey, setSortKey] = useState<SortKey>('added_recent')
   const [showSort, setShowSort] = useState(false)
+  const [currency, setCurrency] = useState<'EUR' | 'KRW'>('EUR')
+
+  // Charger la devise du user au démarrage
+  useEffect(() => {
+    if (!slug) return
+    fetch(`/api/users/${slug}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((user) => {
+        if (user?.currency) setCurrency(user.currency)
+      })
+      .catch(() => {})
+  }, [slug])
 
   const fetchGames = useCallback(async () => {
-    const res = await fetch('/api/games')
+    if (!slug) return
+    const res = await fetch(`/api/games?slug=${slug}`)
     const data: Game[] = await res.json()
     setGames(data)
     data.forEach((game, index) => {
       setTimeout(() => {
         setLoading((l) => ({ ...l, [game.id]: true }))
-        fetch(`/api/prices?title=${encodeURIComponent(game.title)}`)
+        const priceUrl =
+          game.fr_product_id || game.kr_product_id
+            ? `/api/prices?fr_id=${game.fr_product_id ?? ''}&kr_id=${game.kr_product_id ?? ''}`
+            : `/api/prices?title=${encodeURIComponent(game.title)}`
+        fetch(priceUrl)
           .then((r) => {
             if (!r.ok) return null
             return r.json()
@@ -80,7 +99,7 @@ export function GameList() {
           .finally(() => setLoading((l) => ({ ...l, [game.id]: false })))
       }, index * 200)
     })
-  }, [])
+  }, [slug])
 
   useEffect(() => { fetchGames() }, [fetchGames])
 
@@ -88,6 +107,17 @@ export function GameList() {
     await fetch(`/api/games/${id}`, { method: 'DELETE' })
     setGames((g) => g.filter((game) => game.id !== id))
     setPrices((p) => { const { [id]: _, ...rest } = p; return rest })
+  }
+
+  const handleToggleCurrency = async () => {
+    const next: 'EUR' | 'KRW' = currency === 'EUR' ? 'KRW' : 'EUR'
+    setCurrency(next)
+    if (!slug) return
+    await fetch(`/api/users/${slug}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currency: next }),
+    }).catch(() => {})
   }
 
   const sorted = [...games].sort((a, b) => {
@@ -124,14 +154,40 @@ export function GameList() {
         >
           Liste de souhaits
         </h1>
-        <button
-          onClick={() => setShowSort(true)}
-          className="w-10 h-10 rounded-full border flex items-center justify-center flex-shrink-0"
-          style={{ borderColor: '#0070d1' }}
-          aria-label="Trier la liste"
-        >
-          <SortIcon />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Toggle EUR/KRW */}
+          <div className="flex rounded-full border overflow-hidden text-[13px]" style={{ borderColor: 'var(--sep)' }}>
+            <button
+              onClick={currency !== 'EUR' ? handleToggleCurrency : undefined}
+              className="px-3 py-1 font-semibold transition-colors"
+              style={{
+                backgroundColor: currency === 'EUR' ? '#0070d1' : 'transparent',
+                color: currency === 'EUR' ? '#fff' : 'var(--muted)',
+              }}
+            >
+              EUR
+            </button>
+            <button
+              onClick={currency !== 'KRW' ? handleToggleCurrency : undefined}
+              className="px-3 py-1 font-semibold transition-colors"
+              style={{
+                backgroundColor: currency === 'KRW' ? '#0070d1' : 'transparent',
+                color: currency === 'KRW' ? '#fff' : 'var(--muted)',
+              }}
+            >
+              KRW
+            </button>
+          </div>
+          {/* Sort button */}
+          <button
+            onClick={() => setShowSort(true)}
+            className="w-10 h-10 rounded-full border flex items-center justify-center flex-shrink-0"
+            style={{ borderColor: '#0070d1' }}
+            aria-label="Trier la liste"
+          >
+            <SortIcon />
+          </button>
+        </div>
       </div>
 
       {/* List */}
@@ -146,6 +202,7 @@ export function GameList() {
               prices={prices[game.id] ?? null}
               loading={loading[game.id] ?? false}
               onDelete={handleDelete}
+              currency={currency}
             />
           ))
         )}

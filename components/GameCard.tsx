@@ -9,6 +9,7 @@ interface Props {
   prices: PriceResult | null
   loading: boolean
   onDelete: (id: string) => void
+  currency: 'EUR' | 'KRW'
 }
 
 function parseFrEur(priceStr: string | null | undefined): number {
@@ -18,7 +19,7 @@ function parseFrEur(priceStr: string | null | undefined): number {
 
 const DELETE_THRESHOLD = 80
 
-export function GameCard({ game, prices, loading, onDelete }: Props) {
+export function GameCard({ game, prices, loading, onDelete, currency }: Props) {
   const [showActions, setShowActions] = useState(false)
   const [swipeX, setSwipeX] = useState(0)
   const [animating, setAnimating] = useState(false)
@@ -198,6 +199,9 @@ export function GameCard({ game, prices, loading, onDelete }: Props) {
                 {/* Prix FR row */}
                 {(fr?.discountedPrice || fr?.basePrice) && (
                   <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>
+                      FR
+                    </span>
                     {hasFrPromo && (
                       <span
                         className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white dark:bg-white/10"
@@ -241,7 +245,11 @@ export function GameCard({ game, prices, loading, onDelete }: Props) {
                       className="text-[14px] font-semibold"
                       style={{ color: 'var(--ink)' }}
                     >
-                      {krEur > 0 ? `€${krEur.toFixed(2)}` : (kr.discountedPrice ?? kr.basePrice)}
+                      {currency === 'KRW'
+                        ? (kr.discountedPrice ?? kr.basePrice)
+                        : krEur > 0
+                          ? `€${krEur.toFixed(2)}`
+                          : (kr.discountedPrice ?? kr.basePrice)}
                     </span>
                     {saving != null && saving > 0 && (
                       <span className="text-[11px] font-bold bg-[#22c55e] text-white px-1.5 py-0.5 rounded">
