@@ -30,20 +30,22 @@ export function GameCard({ game, prices, loading, onDelete }: Props) {
   const kr = prices?.kr
   const cover = fr?.coverUrl ?? kr?.coverUrl
   const platforms = fr?.platforms ?? []
+
   const hasFrPromo = !!fr?.discountText
   const hasKrPromo = !!kr?.discountText
 
   const frAmount = parseFrEur(fr?.discountedPrice ?? fr?.basePrice)
   const krEur = kr?.priceEur ?? 0
-  const saving = frAmount > 0 && krEur > 0
-    ? Math.round(((frAmount - krEur) / frAmount) * 100)
-    : null
+  const saving =
+    frAmount > 0 && krEur > 0
+      ? Math.round(((frAmount - krEur) / frAmount) * 100)
+      : null
 
   const langBadge = kr
     ? kr.langSafety === 'safe'
-      ? { label: kr.langs.includes('FR') ? 'FR' : 'EN', color: 'bg-[#22C55E]' }
+      ? { label: kr.langs.includes('FR') ? 'FR' : 'EN', color: 'bg-[#22c55e]' }
       : kr.langSafety === 'risky'
-      ? { label: '⚠', color: 'bg-red-500' }
+      ? { label: '⚠', color: 'bg-[#ef4444]' }
       : null
     : null
 
@@ -89,26 +91,42 @@ export function GameCard({ game, prices, loading, onDelete }: Props) {
     setShowActions(true)
   }
 
+  /* Subtitle row: "Carte" / "Offre groupée" */
+  const subtitle = fr
+    ? fr.psPlusTier === null &&
+      (fr.name?.toLowerCase().includes('bundle') || game.title.toLowerCase().includes('bundle'))
+      ? 'Offre groupée'
+      : null
+    : null
+
   return (
     <>
       <div className="relative overflow-hidden">
         {/* Delete zone */}
-        <div className="absolute inset-y-0 right-0 w-20 bg-red-500 flex items-center justify-center">
+        <div className="absolute inset-y-0 right-0 w-20 bg-[#ef4444] flex items-center justify-center">
           <button
             onClick={() => onDelete(game.id)}
             className="w-full h-full flex flex-col items-center justify-center text-white"
+            aria-label="Supprimer"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M4 6h12M8 6V4h4v2M7 6l1 10h4l1-10" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path
+                d="M4 6h12M8 6V4h4v2M7 6l1 10h4l1-10"
+                stroke="white"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
             <span className="text-[11px] font-semibold mt-1">Sup.</span>
           </button>
         </div>
 
-        {/* Card */}
+        {/* Card row */}
         <button
-          className="flex gap-3 px-4 py-3 bg-white w-full text-left active:bg-gray-50 relative"
+          className="flex gap-3 px-4 py-3 w-full text-left active:opacity-70"
           style={{
+            backgroundColor: 'var(--surface)',
             transform: `translateX(${swipeX}px)`,
             transition: animating ? 'transform 0.25s ease' : undefined,
             willChange: swipeX !== 0 || animating ? 'transform' : 'auto',
@@ -118,82 +136,117 @@ export function GameCard({ game, prices, loading, onDelete }: Props) {
           onTouchEnd={onTouchEnd}
           onClick={handleCardTap}
         >
-          {/* Cover */}
-          <div className="relative flex-shrink-0 w-[90px] h-[90px] rounded-lg overflow-hidden bg-gray-100">
+          {/* Cover 68×68 */}
+          <div className="relative flex-shrink-0 w-[68px] h-[68px] rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700">
             {cover ? (
               <Image src={cover} alt={game.title} fill className="object-cover" unoptimized />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">PS</div>
+              <div
+                className="w-full h-full flex items-center justify-center text-xs font-bold"
+                style={{ color: 'var(--muted)' }}
+              >
+                PS
+              </div>
             )}
+            {/* Platform badge — bottom-left */}
             {platforms.length > 0 && (
-              <span className="absolute bottom-1 left-1 text-[10px] font-bold px-1 py-px bg-black/80 text-white rounded">
+              <span className="absolute bottom-1 left-1 text-[10px] font-bold px-1 py-px bg-black/80 text-white rounded leading-none">
                 {platforms[0]}
               </span>
             )}
+            {/* Language badge — bottom-right */}
             {langBadge && (
-              <span className={`absolute bottom-1 right-1 text-[10px] font-bold px-1 py-px ${langBadge.color} text-white rounded`}>
+              <span
+                className={`absolute bottom-1 right-1 text-[10px] font-bold px-1 py-px ${langBadge.color} text-white rounded leading-none`}
+              >
                 {langBadge.label}
               </span>
             )}
           </div>
 
-          {/* Text */}
-          <div className="flex-1 min-w-0 py-1">
-            <p className="font-semibold text-[#0D1B2A] text-[15px] leading-snug line-clamp-2">
+          {/* Text content */}
+          <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+            {/* Title */}
+            <p
+              className="text-[15px] font-semibold leading-[1.3] line-clamp-2"
+              style={{ color: 'var(--ink)' }}
+            >
               {game.title}
             </p>
+
+            {/* Subtitle (Carte / Offre groupée) */}
+            {subtitle && (
+              <p className="text-[13px]" style={{ color: 'var(--muted)' }}>
+                {subtitle}
+              </p>
+            )}
+
             {loading ? (
-              <p className="text-[13px] text-gray-400 mt-1">Chargement…</p>
+              <p className="text-[13px]" style={{ color: 'var(--muted)' }}>
+                Chargement…
+              </p>
             ) : (
               <>
+                {/* PS Plus row */}
                 {fr?.psPlusTier && (
-                  <p className="text-[13px] text-[#C89A0F] mt-0.5 flex items-center gap-1">
+                  <p className="text-[13px] flex items-center gap-1" style={{ color: '#f0b400' }}>
                     <span>✦</span>
                     <span>{fr.psPlusTier === 'PREMIUM' ? 'Premium' : 'Extra'}</span>
                   </p>
                 )}
-                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                  {hasFrPromo && (
-                    <span className="text-[12px] font-bold bg-[#1A1A1A] text-white px-1.5 py-px rounded">
-                      {fr!.discountText}
-                    </span>
-                  )}
-                  <span className="text-[15px] font-semibold text-[#0D1B2A]">
-                    {fr?.discountedPrice ?? fr?.basePrice ?? 'N/D'}
-                  </span>
-                  {hasFrPromo && fr?.basePrice && (
-                    <span className="text-[13px] text-gray-400 line-through">{fr.basePrice}</span>
-                  )}
-                </div>
-                {kr && (
-                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                    <span className="text-[11px] font-bold text-gray-400">KR</span>
-                    {hasKrPromo && (
-                      <span className="text-[12px] font-bold bg-[#1A1A1A] text-white px-1.5 py-px rounded">
-                        {kr.discountText}
+
+                {/* Prix FR row */}
+                {(fr?.discountedPrice || fr?.basePrice) && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {hasFrPromo && (
+                      <span
+                        className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white dark:bg-white/10"
+                        style={{ backgroundColor: 'var(--promo-bg)' }}
+                      >
+                        {fr!.discountText}
                       </span>
                     )}
-                    <span className="text-[14px] font-semibold text-gray-700">
-                      {krEur > 0 ? `€${krEur.toFixed(2)}` : kr.discountedPrice ?? kr.basePrice}
+                    <span className="text-[15px] font-bold" style={{ color: 'var(--ink)' }}>
+                      {fr?.discountedPrice ?? fr?.basePrice}
                     </span>
-                    {saving != null && saving > 0 && (
-                      <span className="text-[11px] font-bold bg-[#22C55E] text-white px-1.5 py-px rounded">
-                        -{saving}%
+                    {hasFrPromo && fr?.basePrice && (
+                      <span
+                        className="text-[13px] line-through"
+                        style={{ color: 'var(--muted)' }}
+                      >
+                        {fr.basePrice}
                       </span>
                     )}
                   </div>
                 )}
-                {!kr && (
-                  <p className="text-[12px] text-gray-400 mt-0.5">Non disponible en KR</p>
-                )}
-                {(prices?.frHasDemo || prices?.krHasDemo) && (
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] font-bold text-gray-400">Démo</span>
-                    {prices?.frHasDemo && (
-                      <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1 rounded">FR</span>
+
+                {/* Prix KR row */}
+                {kr && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span
+                      className="text-[11px] font-bold"
+                      style={{ color: 'var(--muted)' }}
+                    >
+                      KR
+                    </span>
+                    {hasKrPromo && (
+                      <span
+                        className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white dark:bg-white/10"
+                        style={{ backgroundColor: 'var(--promo-bg)' }}
+                      >
+                        {kr.discountText}
+                      </span>
                     )}
-                    {prices?.krHasDemo && (
-                      <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1 rounded">KR</span>
+                    <span
+                      className="text-[14px] font-semibold"
+                      style={{ color: 'var(--ink)' }}
+                    >
+                      {krEur > 0 ? `€${krEur.toFixed(2)}` : (kr.discountedPrice ?? kr.basePrice)}
+                    </span>
+                    {saving != null && saving > 0 && (
+                      <span className="text-[11px] font-bold bg-[#22c55e] text-white px-1.5 py-0.5 rounded">
+                        -{saving}%
+                      </span>
                     )}
                   </div>
                 )}
@@ -201,9 +254,13 @@ export function GameCard({ game, prices, loading, onDelete }: Props) {
             )}
           </div>
         </button>
-      </div>
 
-      <div className="ml-[118px] border-b border-gray-100" />
+        {/* Bottom separator */}
+        <div
+          className="absolute bottom-0 left-4 right-0 h-px"
+          style={{ backgroundColor: 'var(--sep)' }}
+        />
+      </div>
 
       {showActions && (
         <ActionSheet actions={actions} onClose={() => setShowActions(false)} />

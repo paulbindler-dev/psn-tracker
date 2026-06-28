@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from 'next'
 import { DM_Sans } from 'next/font/google'
 import './globals.css'
+import { TabBar } from '@/components/TabBar'
 
 const dmSans = DM_Sans({ subsets: ['latin'] })
 
 export const viewport: Viewport = {
-  themeColor: '#0D1B2A',
+  themeColor: '#ffffff',
 }
 
 export const metadata: Metadata = {
@@ -25,7 +26,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body className={dmSans.className}>{children}</body>
+      <body className={dmSans.className}>
+        <div
+          className="max-w-lg mx-auto min-h-screen"
+          style={{
+            paddingBottom: 'calc(49px + env(safe-area-inset-bottom, 0px))',
+          }}
+        >
+          {children}
+        </div>
+        <TabBar />
+      </body>
     </html>
   )
 }

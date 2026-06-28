@@ -3,14 +3,14 @@ import { SortKey } from '@/lib/types'
 import { useEffect } from 'react'
 
 const OPTIONS: { key: SortKey; label: string }[] = [
-  { key: 'added_recent', label: "Date d'ajout (récente → ancienne)" },
-  { key: 'added_old',    label: "Date d'ajout (ancienne → récente)" },
+  { key: 'added_recent', label: "Date d'ajout (de la plus récente à la plus ancienne)" },
+  { key: 'added_old',    label: "Date d'ajout (de la plus ancienne à la plus récente)" },
   { key: 'name_az',      label: 'Nom (A-Z)' },
   { key: 'name_za',      label: 'Nom (Z-A)' },
-  { key: 'price_fr_asc', label: 'Prix FR (moins cher → plus cher)' },
-  { key: 'price_fr_desc',label: 'Prix FR (plus cher → moins cher)' },
-  { key: 'promo',        label: 'Promo active (FR ou KR)' },
-  { key: 'saving',       label: 'Économie KR vs FR (plus grande → plus petite)' },
+  { key: 'price_fr_asc', label: 'Prix (du moins cher au plus cher)' },
+  { key: 'price_fr_desc',label: 'Prix (du plus cher au moins cher)' },
+  { key: 'promo',        label: 'Promo active' },
+  { key: 'saving',       label: 'Économie KR' },
 ]
 
 interface Props {
@@ -27,35 +27,82 @@ export function SortModal({ current, onChange, onClose }: Props) {
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end" role="dialog" aria-modal="true" aria-label="Trier">
+      {/* Scrim */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-t-2xl pb-8">
-        <div className="py-4 text-center border-b border-gray-100">
-          <span className="text-[17px] font-semibold text-[#0D1B2A]">Trier</span>
+
+      {/* Sheet */}
+      <div
+        className="relative rounded-t-2xl overflow-hidden"
+        style={{
+          backgroundColor: 'var(--surface)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
+        {/* Handle bar */}
+        <div className="flex justify-center pt-2.5 pb-1">
+          <div
+            className="w-9 h-1 rounded-full"
+            style={{ backgroundColor: 'var(--sep)' }}
+          />
         </div>
+
+        {/* Title */}
+        <div
+          className="py-3 text-center border-b"
+          style={{ borderColor: 'var(--sep)' }}
+        >
+          <span
+            className="text-[17px] font-semibold"
+            style={{ color: 'var(--ink)' }}
+          >
+            Trier
+          </span>
+        </div>
+
+        {/* Options */}
         <div>
-          {OPTIONS.map((opt) => (
+          {OPTIONS.map((opt, i) => (
             <button
               key={opt.key}
-              className={`w-full flex items-center justify-between px-5 py-4 border-b border-gray-100 last:border-0 ${
-                current === opt.key ? 'text-[#0D1B2A]' : 'text-gray-700'
-              }`}
+              className="w-full flex items-center justify-between px-5 py-4 active:opacity-70"
+              style={{
+                borderBottom: i < OPTIONS.length - 1 ? '1px solid var(--sep)' : undefined,
+              }}
               onClick={() => { onChange(opt.key); onClose() }}
             >
-              <span className="text-[15px]">{opt.label}</span>
-              {current === opt.key ? (
-                <span className="w-5 h-5 rounded-full border-2 border-[#007AFF] flex items-center justify-center">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#007AFF]" />
-                </span>
-              ) : (
-                <span className="w-5 h-5 rounded-full border-2 border-gray-300" />
-              )}
+              <span
+                className="text-[15px] text-left pr-4"
+                style={{ color: 'var(--ink)' }}
+              >
+                {opt.label}
+              </span>
+              {/* Radio */}
+              <span
+                className="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center"
+                style={{
+                  borderColor: current === opt.key ? '#0070d1' : 'var(--muted)',
+                }}
+              >
+                {current === opt.key && (
+                  <span
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ backgroundColor: '#0070d1' }}
+                  />
+                )}
+              </span>
             </button>
           ))}
         </div>
-        <div className="mx-4 mt-3">
+
+        {/* Cancel */}
+        <div className="px-4 py-3">
           <button
-            className="w-full py-4 rounded-2xl bg-[#f2f2f7] text-[17px] font-semibold text-[#007AFF]"
+            className="w-full py-3.5 rounded-2xl text-[17px] font-semibold"
+            style={{
+              backgroundColor: 'var(--sep)',
+              color: '#0070d1',
+            }}
             onClick={onClose}
           >
             Annuler

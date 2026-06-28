@@ -21,30 +21,37 @@ export function ActionSheet({ actions, onClose }: Props) {
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end" role="dialog" aria-modal="true">
+      {/* Scrim */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-[#f2f2f7] rounded-t-2xl pb-8 pt-2 safe-area-bottom">
-        <div className="mx-4 mt-2 rounded-2xl overflow-hidden bg-white">
+
+      {/* Sheet */}
+      <div
+        className="relative px-4 pb-3"
+        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+      >
+        {/* Actions group */}
+        <div className="rounded-2xl overflow-hidden mb-3" style={{ backgroundColor: 'var(--surface)' }}>
           {actions.map((action, i) => (
             <div key={i}>
-              {i > 0 && <div className="border-t border-gray-100" />}
+              {i > 0 && (
+                <div className="h-px mx-4" style={{ backgroundColor: 'var(--sep)' }} />
+              )}
               {action.href ? (
                 <a
                   href={action.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`block py-4 px-5 text-center text-[17px] ${
-                    action.destructive ? 'text-red-500' : 'text-[#007AFF]'
-                  }`}
+                  className="flex items-center justify-center min-h-[56px] px-5 text-[17px] active:opacity-70"
+                  style={{ color: action.destructive ? '#ef4444' : '#0070d1' }}
                   onClick={onClose}
                 >
                   {action.label}
                 </a>
               ) : (
                 <button
-                  className={`w-full py-4 px-5 text-center text-[17px] ${
-                    action.destructive ? 'text-red-500' : 'text-[#007AFF]'
-                  }`}
+                  className="w-full flex items-center justify-center min-h-[56px] px-5 text-[17px] active:opacity-70"
+                  style={{ color: action.destructive ? '#ef4444' : '#0070d1' }}
                   onClick={() => { action.onClick?.(); onClose() }}
                 >
                   {action.label}
@@ -53,9 +60,12 @@ export function ActionSheet({ actions, onClose }: Props) {
             </div>
           ))}
         </div>
-        <div className="mx-4 mt-3 rounded-2xl overflow-hidden bg-white">
+
+        {/* Cancel — separate group */}
+        <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--surface)' }}>
           <button
-            className="w-full py-4 px-5 text-center text-[17px] font-semibold text-[#007AFF]"
+            className="w-full flex items-center justify-center min-h-[56px] px-5 text-[17px] font-semibold active:opacity-70"
+            style={{ color: '#0070d1' }}
             onClick={onClose}
           >
             Annuler

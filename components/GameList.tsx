@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { Game, PriceResult, SortKey } from '@/lib/types'
 import { GameCard } from './GameCard'
 import { SortModal } from './SortModal'
@@ -7,6 +8,51 @@ import { SortModal } from './SortModal'
 function parseFrEur(priceStr: string | null | undefined): number {
   if (!priceStr) return Infinity
   return parseFloat(priceStr.replace(/[^0-9,]/g, '').replace(',', '.')) || Infinity
+}
+
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 px-8 gap-5">
+      {/* PS logo placeholder */}
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" aria-hidden="true">
+        <rect width="72" height="72" rx="36" fill="none"/>
+        <text
+          x="36"
+          y="48"
+          textAnchor="middle"
+          fontSize="32"
+          fontWeight="bold"
+          fill="var(--sep)"
+          fontFamily="DM Sans, sans-serif"
+        >
+          PS
+        </text>
+      </svg>
+      <div className="text-center gap-1.5 flex flex-col">
+        <p className="text-[17px] font-semibold" style={{ color: 'var(--ink)' }}>
+          Ta liste est vide
+        </p>
+        <p className="text-[15px]" style={{ color: 'var(--muted)' }}>
+          Recherche un jeu pour commencer
+        </p>
+      </div>
+      <Link
+        href="/search"
+        className="mt-2 px-6 py-3 rounded-xl text-[15px] font-semibold text-white"
+        style={{ backgroundColor: '#0070d1' }}
+      >
+        Rechercher
+      </Link>
+    </div>
+  )
+}
+
+function SortIcon() {
+  return (
+    <svg width="18" height="14" viewBox="0 0 18 14" fill="none" aria-hidden="true">
+      <path d="M1 1h16M1 7h10M1 13h6" stroke="#0070d1" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  )
 }
 
 export function GameList() {
@@ -50,8 +96,8 @@ export function GameList() {
     switch (sortKey) {
       case 'added_recent': return 0
       case 'added_old':    return new Date(a.added_at).getTime() - new Date(b.added_at).getTime()
-      case 'name_az': return a.title.localeCompare(b.title, 'fr')
-      case 'name_za': return b.title.localeCompare(a.title, 'fr')
+      case 'name_az':      return a.title.localeCompare(b.title, 'fr')
+      case 'name_za':      return b.title.localeCompare(a.title, 'fr')
       case 'price_fr_asc':
         return parseFrEur(pa?.fr?.discountedPrice) - parseFrEur(pb?.fr?.discountedPrice)
       case 'price_fr_desc':
@@ -68,35 +114,30 @@ export function GameList() {
     }
   })
 
-  const SORT_LABELS: Record<SortKey, string> = {
-    added_recent: 'Date récente', added_old: 'Date ancienne',
-    name_az: 'A-Z', name_za: 'Z-A',
-    price_fr_asc: 'Prix FR ↑', price_fr_desc: 'Prix FR ↓',
-    promo: 'Promo', saving: 'Économie KR',
-  }
-
   return (
     <>
-      <div className="flex items-center justify-between px-4 py-3">
-        <h1 className="text-[22px] font-bold text-[#0D1B2A]">Mes jeux</h1>
+      {/* Header PSN */}
+      <div className="flex items-center justify-between px-4 pt-6 pb-4">
+        <h1
+          className="text-[28px] font-bold"
+          style={{ color: 'var(--ink)' }}
+        >
+          Liste de souhaits
+        </h1>
         <button
           onClick={() => setShowSort(true)}
-          className="w-10 h-10 rounded-full border border-[#007AFF] flex items-center justify-center"
-          title={`Tri : ${SORT_LABELS[sortKey]}`}
+          className="w-10 h-10 rounded-full border flex items-center justify-center flex-shrink-0"
+          style={{ borderColor: '#0070d1' }}
+          aria-label="Trier la liste"
         >
-          <svg width="18" height="14" viewBox="0 0 18 14" fill="none">
-            <path d="M1 1h16M1 7h10M1 13h6" stroke="#007AFF" strokeWidth="2" strokeLinecap="round"/>
-            <path d="M14 10l2 3 2-3" stroke="#007AFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <SortIcon />
         </button>
       </div>
 
-      <div className="bg-white overflow-hidden">
+      {/* List */}
+      <div style={{ backgroundColor: 'var(--bg)' }}>
         {sorted.length === 0 ? (
-          <p className="text-center text-gray-400 py-16 text-[15px] px-8">
-            Aucun jeu dans ta liste.{' '}
-            <a href="/search" className="text-[#007AFF] underline">Ajouter un jeu</a>
-          </p>
+          <EmptyState />
         ) : (
           sorted.map((game) => (
             <GameCard
