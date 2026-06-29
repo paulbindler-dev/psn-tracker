@@ -23,7 +23,13 @@ export function SortModal({ current, onChange, onClose }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    // Prevent body scroll while sheet is open
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
   }, [onClose])
 
   return (
@@ -60,8 +66,8 @@ export function SortModal({ current, onChange, onClose }: Props) {
           </span>
         </div>
 
-        {/* Options */}
-        <div>
+        {/* Options — scrollable, contained */}
+        <div style={{ overflowY: 'auto', maxHeight: '60vh', overscrollBehavior: 'contain' }}>
           {OPTIONS.map((opt, i) => (
             <button
               key={opt.key}
