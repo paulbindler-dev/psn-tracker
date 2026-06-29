@@ -231,14 +231,8 @@ export default function SlugSearchPage() {
     }
   }, [])
 
-  // When DEMO filter activated with no query, auto-fetch demos
   const prevFilter = useRef<ViewFilter>('all')
-  useEffect(() => {
-    if (filter === 'DEMO' && prevFilter.current !== 'DEMO' && !query.trim()) {
-      doSearch('demo')
-    }
-    prevFilter.current = filter
-  }, [filter, query, doSearch])
+  useEffect(() => { prevFilter.current = filter }, [filter])
 
   const handleQueryChange = (val: string) => {
     setQuery(val)
@@ -250,12 +244,8 @@ export default function SlugSearchPage() {
 
   const handleClearQuery = () => {
     setQuery('')
-    if (filter === 'DEMO') {
-      doSearch('demo')
-    } else {
-      setPhase('idle')
-      setResults({ games: [], addons: [], demos: [], krGames: [] })
-    }
+    setPhase('idle')
+    setResults({ games: [], addons: [], demos: [], krGames: [] })
   }
 
   const handleSelect = async (product: PSNProduct) => {
@@ -419,10 +409,19 @@ export default function SlugSearchPage() {
       </div>
 
       {/* ── Content ────────────────────────────────────────── */}
-      <div style={{ paddingTop: isConfirming ? 100 : 170 }}>
+      <div style={{ paddingTop: isConfirming ? 110 : 222 }}>
         {error && <p className="px-4 py-2 text-[14px]" style={{ color: '#ef4444' }}>{error}</p>}
 
-        {phase === 'idle' && !error && <SearchEmptyState />}
+        {phase === 'idle' && !error && (
+          filter === 'DEMO' ? (
+            <div className="flex flex-col items-center justify-center py-20 px-8 gap-4" style={{ color: 'var(--muted)' }}>
+              <MagnifyingGlass size={56} weight="light" color="var(--muted)" />
+              <p className="text-[15px] text-center leading-relaxed" style={{ color: 'var(--muted)' }}>
+                Tape le titre d&apos;un jeu pour trouver sa démo PS5
+              </p>
+            </div>
+          ) : <SearchEmptyState />
+        )}
 
         {phase === 'searching' && (
           <div className="flex justify-center py-12">

@@ -1,15 +1,14 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { GameController, MagnifyingGlass, PlayCircle } from '@phosphor-icons/react'
+import { GameController, MagnifyingGlass } from '@phosphor-icons/react'
 
 export function TabBar({ slug }: { slug: string }) {
   const path = usePathname()
 
   const tabs = [
-    { href: `/${slug}`, label: 'Ma liste', Icon: GameController, exact: true },
+    { href: `/${slug}`, label: 'Liste', Icon: GameController, exact: true },
     { href: `/${slug}/search`, label: 'Rechercher', Icon: MagnifyingGlass, exact: false },
-    { href: `/${slug}/demos`, label: 'Démos', Icon: PlayCircle, exact: false },
   ]
 
   const isActive = (href: string, exact: boolean) =>
