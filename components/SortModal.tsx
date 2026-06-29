@@ -101,19 +101,6 @@ export function SortModal({ current, onChange, onClose }: Props) {
           ))}
         </div>
 
-        {/* Cancel */}
-        <div className="px-4 py-3">
-          <button
-            className="w-full py-3.5 rounded-2xl text-[17px] font-semibold"
-            style={{
-              backgroundColor: 'var(--sep)',
-              color: '#0070d1',
-            }}
-            onClick={onClose}
-          >
-            Annuler
-          </button>
-        </div>
       </div>
     </div>
   )
