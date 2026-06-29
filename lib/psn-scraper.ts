@@ -38,14 +38,8 @@ export async function fetchProductById(
   if (!res.ok) return null
 
   const products = parseNextDataHtml(await res.text())
-  return (
-    products.find((p) => p.id === productId) ??
-    products.find((p) =>
-      ['FULL_GAME', 'GAME_BUNDLE', 'LEGACY_GAME'].includes(p.storeDisplayClassification)
-    ) ??
-    products[0] ??
-    null
-  )
+  // Only return exact ID match — no fuzzy fallback to avoid returning wrong games
+  return products.find((p) => p.id === productId) ?? null
 }
 
 export function parseNextDataHtml(html: string): PSNProduct[] {

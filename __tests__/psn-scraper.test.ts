@@ -113,7 +113,7 @@ describe('fetchProductById', () => {
     )
   })
 
-  it('retourne le premier FULL_GAME si lID exact ne matche pas', async () => {
+  it('retourne null si lID exact ne matche pas (évite les faux positifs)', async () => {
     const fixture = buildFixtureWithProduct({
       id: 'EP0001-OTHER-ID',
       storeDisplayClassification: 'FULL_GAME',
@@ -123,8 +123,7 @@ describe('fetchProductById', () => {
     global.fetch = jest.fn().mockResolvedValueOnce({ ok: true, text: async () => fixture })
 
     const result = await fetchProductById('EP0001-SEARCHED-ID', 'fr-fr')
-    expect(result).not.toBeNull()
-    expect(result!.storeDisplayClassification).toBe('FULL_GAME')
+    expect(result).toBeNull()
   })
 })
 

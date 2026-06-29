@@ -32,55 +32,26 @@ export async function GET(req: NextRequest) {
   const exchangeResPromise = fetch(`${req.nextUrl.origin}/api/exchange`)
 
   if (frId || krId) {
-    // Fetch by ID, with title fallback when ID lookup fails
-    const tasks: Promise<void>[] = []
+    // Phase 1: exact ID lookup (no fuzzy fallback)
+    await Promise.all([
+      frId ? fetchProductById(frId, 'fr-fr').then((p) => { if (p) { frProduct = p; frProducts = [p] } }) : Promise.resolve(),
+      krId ? fetchProductById(krId, 'ko-kr').then((p) => { if (p) { krProduct = p; krProducts = [p] } }) : Promise.resolve(),
+    ])
 
-    if (frId) {
-      tasks.push(
-        fetchProductById(frId, 'fr-fr').then((p) => {
-          if (p) { frProduct = p; frProducts = [p] }
-        })
-      )
+    // Phase 2: title search for any region where ID lookup returned nothing
+    const needFrSearch = frProducts.length === 0 && !!title
+    const needKrSearch = krProducts.length === 0 && !!title  // also covers no krId case
+    if (needFrSearch || needKrSearch) {
+      await Promise.all([
+        needFrSearch ? searchPSN('fr-fr', title!).then((ps) => { frProducts = ps }) : Promise.resolve(),
+        needKrSearch ? searchPSN('ko-kr', title!).then((ps) => { krProducts = ps }) : Promise.resolve(),
+      ])
     }
 
-    if (krId) {
-      tasks.push(
-        fetchProductById(krId, 'ko-kr').then((p) => {
-          if (p) { krProduct = p; krProducts = [p] }
-        })
-      )
-    }
-
-    // Always search KR by title when no krId — needed for price comparison
-    if (!krId && title) {
-      tasks.push(
-        searchPSN('ko-kr', title).then((ps) => {
-          krProducts = ps
-        })
-      )
-    }
-
-    await Promise.all(tasks)
-
-    // Fallback: if frId lookup returned nothing, try title search
-    if (frId && frProducts.length === 0 && title) {
-      frProducts = await searchPSN('fr-fr', title)
-    }
-
-    // Fallback: if krId lookup returned nothing, try title search
-    if (krId && krProducts.length === 0 && title) {
-      krProducts = await searchPSN('ko-kr', title)
-    }
-
-    if (!frProduct) {
-      const matched = matchProducts(frProducts, krProducts)
-      frProduct = matched.fr
-    }
-
-    if (!krProduct) {
-      const matched = matchProducts(frProducts, krProducts)
-      krProduct = matched.kr
-    }
+    // Phase 3: match best products from whatever we collected
+    const matched = matchProducts(frProducts, krProducts)
+    if (!frProduct) frProduct = matched.fr
+    if (!krProduct) krProduct = matched.kr
   } else {
     // Classic title-based search for both regions
     const [fr, kr] = await Promise.all([
