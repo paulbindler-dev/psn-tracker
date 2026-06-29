@@ -39,6 +39,8 @@ export interface PriceResult {
   } | null
   frHasDemo: boolean
   krHasDemo: boolean
+  /** KRW per 1 EUR (e.g. 1490). Use to convert EUR→KRW or KRW→EUR. */
+  krwRate: number | null
 }
 
 export interface User {

@@ -229,17 +229,20 @@ export function GameList() {
 
   return (
     <>
-      {/* Header PSN */}
-      <div className="flex items-center justify-between px-4 pt-6 pb-4">
-        <h1 className="text-[28px] font-bold" style={{ color: 'var(--ink)' }}>
-          Liste de souhaits
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 pt-6 pb-3">
+        <h1 className="text-[26px] font-bold leading-none tracking-tight" style={{ color: 'var(--ink)' }}>
+          Liste
         </h1>
-        <div className="flex items-center gap-2">
-          {/* Toggle EUR/KRW */}
-          <div className="flex rounded-full border overflow-hidden text-[13px]" style={{ borderColor: 'var(--sep)' }}>
+        <div className="flex items-center gap-1.5">
+          {/* Currency segmented control */}
+          <div
+            className="flex items-center rounded-lg p-0.5 text-[13px]"
+            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--sep)' }}
+          >
             <button
               onClick={currency !== 'EUR' ? handleToggleCurrency : undefined}
-              className="px-3 py-1 font-semibold transition-colors"
+              className="px-2.5 py-1 rounded-md font-semibold transition-colors"
               style={{
                 backgroundColor: currency === 'EUR' ? '#0070d1' : 'transparent',
                 color: currency === 'EUR' ? '#fff' : 'var(--muted)',
@@ -249,7 +252,7 @@ export function GameList() {
             </button>
             <button
               onClick={currency !== 'KRW' ? handleToggleCurrency : undefined}
-              className="px-3 py-1 font-semibold transition-colors"
+              className="px-2.5 py-1 rounded-md font-semibold transition-colors"
               style={{
                 backgroundColor: currency === 'KRW' ? '#0070d1' : 'transparent',
                 color: currency === 'KRW' ? '#fff' : 'var(--muted)',
@@ -261,11 +264,11 @@ export function GameList() {
           {/* Sort button */}
           <button
             onClick={() => setShowSort(true)}
-            className="w-10 h-10 rounded-full border flex items-center justify-center flex-shrink-0"
-            style={{ borderColor: '#0070d1' }}
+            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--sep)' }}
             aria-label="Trier la liste"
           >
-            <SortDescending size={20} color="#0070d1" />
+            <SortDescending size={18} color="var(--muted)" />
           </button>
         </div>
       </div>

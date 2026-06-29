@@ -81,6 +81,7 @@ export async function GET(req: NextRequest) {
   const krHasDemo = krProducts.some((p) => p.storeDisplayClassification === 'DEMO')
 
   const result: PriceResult = {
+    krwRate: krwToEur > 0 ? Math.round(1 / krwToEur) : null,
     fr: fr
       ? {
           id: fr.id,

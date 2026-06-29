@@ -99,12 +99,14 @@ function ProductRow({
               <StarFour size={11} weight="fill" color="#f0b400" /><span>{tier}</span>
             </p>
           )}
-          {(product.discountedPrice || product.basePrice) && (
+          {product.isFree || product.storeDisplayClassification === 'DEMO' ? (
+            <span className="text-[13px]" style={{ color: 'var(--muted)' }}>Gratuit</span>
+          ) : (product.discountedPrice || product.basePrice) ? (
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>FR</span>
               {product.discountText && (
                 <span
-                  className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white dark:bg-white/10"
+                  className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white"
                   style={{ backgroundColor: 'var(--promo-bg)' }}
                 >
                   {product.discountText}
@@ -119,7 +121,7 @@ function ProductRow({
                 </span>
               )}
             </div>
-          )}
+          ) : null}
         </div>
       </button>
 
@@ -203,13 +205,13 @@ export default function SlugSearchPage() {
       params.append('title', clean)
       const res = await fetch(`/api/prices?${params}`)
       if (!res.ok) {
-        setComparison({ fr: null, kr: null, frHasDemo: false, krHasDemo: false })
+        setComparison({ fr: null, kr: null, frHasDemo: false, krHasDemo: false, krwRate: null })
         return
       }
       const data: PriceResult = await res.json()
       setComparison(data)
     } catch {
-      setComparison({ fr: null, kr: null, frHasDemo: false, krHasDemo: false })
+      setComparison({ fr: null, kr: null, frHasDemo: false, krHasDemo: false, krwRate: null })
     }
   }
 
@@ -516,19 +518,23 @@ export default function SlugSearchPage() {
 
               {/* Demo row */}
               {comparison && (comparison.frHasDemo || comparison.krHasDemo) && (
-                <div className="px-4 pb-3 flex items-center gap-2">
-                  <span className="text-[12px]" style={{ color: 'var(--muted)' }}>Démo jouable :</span>
+                <div className="px-4 pb-3 flex items-center gap-1.5">
+                  <span className="text-[12px]" style={{ color: 'var(--muted)' }}>Démo :</span>
                   {comparison.frHasDemo && (
-                    <span className="text-[11px] font-bold bg-blue-100 text-blue-700 px-1.5 py-px rounded">FR ✓</span>
+                    <span
+                      className="text-[11px] font-bold px-1.5 py-px rounded text-white"
+                      style={{ backgroundColor: '#0070d1' }}
+                    >
+                      FR
+                    </span>
                   )}
                   {comparison.krHasDemo && (
-                    <span className="text-[11px] font-bold bg-blue-100 text-blue-700 px-1.5 py-px rounded">KR ✓</span>
-                  )}
-                  {!comparison.frHasDemo && (
-                    <span className="text-[11px]" style={{ color: 'var(--muted)' }}>FR –</span>
-                  )}
-                  {!comparison.krHasDemo && (
-                    <span className="text-[11px]" style={{ color: 'var(--muted)' }}>KR –</span>
+                    <span
+                      className="text-[11px] font-bold px-1.5 py-px rounded text-white"
+                      style={{ backgroundColor: '#0070d1' }}
+                    >
+                      KR
+                    </span>
                   )}
                 </div>
               )}

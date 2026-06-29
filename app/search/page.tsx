@@ -172,13 +172,13 @@ export default function SearchPage() {
     try {
       const res = await fetch(`/api/prices?title=${encodeURIComponent(product.name.split('(')[0].trim())}`)
       if (!res.ok) {
-        setComparison({ fr: null, kr: null, frHasDemo: false, krHasDemo: false })
+        setComparison({ fr: null, kr: null, frHasDemo: false, krHasDemo: false, krwRate: null })
         return
       }
       const data: PriceResult = await res.json()
       setComparison(data)
     } catch {
-      setComparison({ fr: null, kr: null, frHasDemo: false, krHasDemo: false })
+      setComparison({ fr: null, kr: null, frHasDemo: false, krHasDemo: false, krwRate: null })
     }
   }
 

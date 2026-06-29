@@ -19,6 +19,15 @@ function parseFrEur(priceStr: string | null | undefined): number {
   return parseFloat(priceStr.replace(/[^0-9,]/g, '').replace(',', '.')) || 0
 }
 
+function parseKRW(priceStr: string | null | undefined): number {
+  if (!priceStr) return 0
+  return parseInt(priceStr.replace(/[^0-9]/g, ''), 10) || 0
+}
+
+function fmtKRW(amount: number): string {
+  return `${Math.round(amount).toLocaleString('ko-KR')}원`
+}
+
 const DELETE_THRESHOLD = 80
 const NOTIFY_THRESHOLD = 80
 
@@ -33,24 +42,47 @@ export function GameCard({ game, prices, loading, onDelete, onToggleNotify, curr
 
   const fr = prices?.fr
   const kr = prices?.kr
+  const krwRate = prices?.krwRate ?? 0
   const cover = fr?.coverUrl ?? kr?.coverUrl
   const platforms = fr?.platforms ?? []
 
   const hasFrPromo = !!fr?.discountText
   const hasKrPromo = !!kr?.discountText
 
-  const frAmount = parseFrEur(fr?.discountedPrice ?? fr?.basePrice)
+  const frEurAmount = parseFrEur(fr?.discountedPrice ?? fr?.basePrice)
   const krEur = kr?.priceEur ?? 0
   const saving =
-    frAmount > 0 && krEur > 0
-      ? Math.round(((frAmount - krEur) / frAmount) * 100)
+    frEurAmount > 0 && krEur > 0
+      ? Math.round(((frEurAmount - krEur) / frEurAmount) * 100)
       : null
+
+  // FR price display — convert to KRW if toggle is on
+  const frPriceDisplay = currency === 'KRW' && krwRate > 0
+    ? fmtKRW(frEurAmount * krwRate)
+    : (fr?.discountedPrice ?? fr?.basePrice)
+  const frBasePriceDisplay = hasFrPromo
+    ? currency === 'KRW' && krwRate > 0
+      ? fmtKRW(parseFrEur(fr?.basePrice) * krwRate)
+      : fr?.basePrice
+    : null
+
+  // KR price display
+  const krPriceDisplay = currency === 'KRW'
+    ? (kr?.discountedPrice ?? kr?.basePrice)
+    : krEur > 0 ? `€${krEur.toFixed(2)}` : (kr?.discountedPrice ?? kr?.basePrice)
+  const krBasePriceDisplay = hasKrPromo
+    ? currency === 'KRW'
+      ? kr?.basePrice
+      : krwRate > 0 && kr?.basePrice
+        ? `€${(parseKRW(kr.basePrice) / krwRate).toFixed(2)}`
+        : null
+    : null
 
   const langBadge = kr
     ? kr.langSafety === 'safe'
-      ? { label: kr.langs.includes('FR') ? 'FR' : 'EN', color: 'bg-[#22c55e]' }
+      ? { label: kr.langs.includes('FR') ? 'FR' : 'EN', color: '#22c55e' }
       : kr.langSafety === 'risky'
-      ? { label: '⚠', color: 'bg-[#ef4444]' }
+      ? { label: 'KR', color: '#ef4444' }
       : null
     : null
 
@@ -83,7 +115,7 @@ export function GameCard({ game, prices, loading, onDelete, onToggleNotify, curr
     const dy = e.touches[0].clientY - touchStartY.current
 
     if (!isDragging.current) {
-      if (Math.abs(dy) > Math.abs(dx)) return // vertical scroll
+      if (Math.abs(dy) > Math.abs(dx)) return
       if (Math.abs(dx) < 5) return
       isDragging.current = true
       dirLocked.current = dx < 0 ? 'left' : 'right'
@@ -99,12 +131,10 @@ export function GameCard({ game, prices, loading, onDelete, onToggleNotify, curr
   const onTouchEnd = () => {
     if (!isDragging.current) return
     if (swipeX < -DELETE_THRESHOLD) {
-      // Sticky delete zone
       setAnimating(true)
       setSwipeX(-DELETE_THRESHOLD)
       setTimeout(() => setAnimating(false), 200)
     } else if (swipeX > NOTIFY_THRESHOLD) {
-      // Trigger notify toggle + snap back
       onToggleNotify(game.id, !game.notify)
       resetSwipe()
     } else {
@@ -127,7 +157,7 @@ export function GameCard({ game, prices, loading, onDelete, onToggleNotify, curr
   return (
     <>
       <div className="relative overflow-hidden">
-        {/* Notify zone (left side, revealed by right swipe) */}
+        {/* Notify zone (left, revealed by right swipe) */}
         <div
           className="absolute inset-y-0 left-0 w-20 flex items-center justify-center"
           style={{ backgroundColor: '#0070d1' }}
@@ -140,7 +170,7 @@ export function GameCard({ game, prices, loading, onDelete, onToggleNotify, curr
           </div>
         </div>
 
-        {/* Delete zone (right side, revealed by left swipe) */}
+        {/* Delete zone (right, revealed by left swipe) */}
         <div className="absolute inset-y-0 right-0 w-20 bg-[#ef4444] flex items-center justify-center">
           <button
             onClick={() => onDelete(game.id)}
@@ -186,16 +216,15 @@ export function GameCard({ game, prices, loading, onDelete, onToggleNotify, curr
                 PS
               </div>
             )}
-            {/* Platform badge — bottom-left */}
             {platforms.length > 0 && (
               <span className="absolute bottom-1 left-1 text-[10px] font-bold px-1 py-px bg-black/80 text-white rounded leading-none">
                 {platforms[0]}
               </span>
             )}
-            {/* Language badge — bottom-right */}
             {langBadge && (
               <span
-                className={`absolute bottom-1 right-1 text-[10px] font-bold px-1 py-px ${langBadge.color} text-white rounded leading-none`}
+                className="absolute bottom-1 right-1 text-[10px] font-bold px-1 py-px text-white rounded leading-none"
+                style={{ backgroundColor: langBadge.color }}
               >
                 {langBadge.label}
               </span>
@@ -204,7 +233,7 @@ export function GameCard({ game, prices, loading, onDelete, onToggleNotify, curr
 
           {/* Text content */}
           <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-            {/* Title row with notify bell indicator */}
+            {/* Title row */}
             <div className="flex items-start gap-1">
               <p
                 className="text-[15px] font-normal leading-[1.3] line-clamp-2 flex-1"
@@ -217,7 +246,6 @@ export function GameCard({ game, prices, loading, onDelete, onToggleNotify, curr
               )}
             </div>
 
-            {/* Subtitle (Carte / Offre groupée) */}
             {subtitle && (
               <p className="text-[13px]" style={{ color: 'var(--muted)' }}>
                 {subtitle}
@@ -230,7 +258,6 @@ export function GameCard({ game, prices, loading, onDelete, onToggleNotify, curr
               </p>
             ) : (
               <>
-                {/* PS Plus row */}
                 {fr?.psPlusTier && (
                   <p className="text-[13px] flex items-center gap-0.5" style={{ color: '#f0b400' }}>
                     <StarFour size={11} weight="fill" color="#f0b400" />
@@ -238,7 +265,7 @@ export function GameCard({ game, prices, loading, onDelete, onToggleNotify, curr
                   </p>
                 )}
 
-                {/* Prix FR row */}
+                {/* Prix FR */}
                 {(fr?.discountedPrice || fr?.basePrice) && (
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>
@@ -246,56 +273,43 @@ export function GameCard({ game, prices, loading, onDelete, onToggleNotify, curr
                     </span>
                     {hasFrPromo && (
                       <span
-                        className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white dark:bg-white/10"
+                        className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white"
                         style={{ backgroundColor: 'var(--promo-bg)' }}
                       >
                         {fr!.discountText}
                       </span>
                     )}
                     <span className="text-[15px] font-bold" style={{ color: 'var(--ink)' }}>
-                      {fr?.discountedPrice ?? fr?.basePrice}
+                      {frPriceDisplay}
                     </span>
-                    {hasFrPromo && fr?.basePrice && (
-                      <span
-                        className="text-[13px] line-through"
-                        style={{ color: 'var(--muted)' }}
-                      >
-                        {fr.basePrice}
+                    {frBasePriceDisplay && (
+                      <span className="text-[13px] line-through" style={{ color: 'var(--muted)' }}>
+                        {frBasePriceDisplay}
                       </span>
                     )}
                   </div>
                 )}
 
-                {/* Prix KR row */}
+                {/* Prix KR */}
                 {kr && (
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span
-                      className="text-[11px] font-bold"
-                      style={{ color: 'var(--muted)' }}
-                    >
+                    <span className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>
                       KR
                     </span>
                     {hasKrPromo && (
                       <span
-                        className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white dark:bg-white/10"
+                        className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white"
                         style={{ backgroundColor: 'var(--promo-bg)' }}
                       >
                         {kr.discountText}
                       </span>
                     )}
-                    <span
-                      className="text-[14px] font-semibold"
-                      style={{ color: 'var(--ink)' }}
-                    >
-                      {currency === 'KRW'
-                        ? (kr.discountedPrice ?? kr.basePrice)
-                        : krEur > 0
-                          ? `€${krEur.toFixed(2)}`
-                          : (kr.discountedPrice ?? kr.basePrice)}
+                    <span className="text-[15px] font-bold" style={{ color: 'var(--ink)' }}>
+                      {krPriceDisplay}
                     </span>
-                    {hasKrPromo && kr.basePrice && currency === 'KRW' && (
-                      <span className="text-[12px] line-through" style={{ color: 'var(--muted)' }}>
-                        {kr.basePrice}
+                    {krBasePriceDisplay && (
+                      <span className="text-[13px] line-through" style={{ color: 'var(--muted)' }}>
+                        {krBasePriceDisplay}
                       </span>
                     )}
                     {saving != null && saving > 0 && (
@@ -310,7 +324,7 @@ export function GameCard({ game, prices, loading, onDelete, onToggleNotify, curr
           </div>
         </button>
 
-        {/* Bottom separator — aligns with text (after cover) */}
+        {/* Separator */}
         <div
           className="absolute bottom-0 right-0 h-px"
           style={{ backgroundColor: 'var(--sep)', left: 96 }}
