@@ -6,10 +6,11 @@ import Image from 'next/image'
 import { MagnifyingGlass, X, StarFour, Check } from '@phosphor-icons/react'
 import { useSlug } from '@/lib/slug-context'
 import { PSNProduct, PriceResult, Game } from '@/lib/types'
+import { matchProducts } from '@/lib/game-matcher'
 
 type Phase = 'idle' | 'searching' | 'results' | 'confirming' | 'adding'
 type ViewFilter = 'all' | 'PS5' | 'PS4' | 'DEMO'
-interface SearchResults { games: PSNProduct[]; addons: PSNProduct[]; demos: PSNProduct[] }
+interface SearchResults { games: PSNProduct[]; addons: PSNProduct[]; demos: PSNProduct[]; krGames: PSNProduct[] }
 
 function Toast({ message }: { message: string }) {
   return (
@@ -35,11 +36,15 @@ function SearchEmptyState() {
 
 function ProductRow({
   product,
+  krProduct,
+  krwRate,
   isAdded,
   onClick,
   onQuickAdd,
 }: {
   product: PSNProduct
+  krProduct: PSNProduct | null
+  krwRate: number
   isAdded: boolean
   onClick: () => void
   onQuickAdd: () => void
@@ -50,6 +55,13 @@ function ProductRow({
     ? 'Extra'
     : null
   const isDemo = product.storeDisplayClassification === 'DEMO'
+
+  const krEur = krProduct
+    ? (() => {
+        const raw = parseInt((krProduct.discountedPrice ?? krProduct.basePrice ?? '').replace(/[^0-9]/g, ''), 10)
+        return krwRate > 0 && raw > 0 ? Math.round(raw / krwRate * 100) / 100 : null
+      })()
+    : null
 
   return (
     <div className="flex items-stretch w-full" style={{ backgroundColor: 'var(--surface)' }}>
@@ -78,20 +90,37 @@ function ProductRow({
           {isDemo || product.isFree ? (
             <span className="text-[13px]" style={{ color: 'var(--muted)' }}>Gratuit</span>
           ) : (product.discountedPrice || product.basePrice) ? (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>FR</span>
-              {product.discountText && (
-                <span className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: 'var(--promo-bg)' }}>
-                  {product.discountText}
+            <>
+              {/* Prix FR */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>FR</span>
+                {product.discountText && (
+                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: 'var(--promo-bg)' }}>
+                    {product.discountText}
+                  </span>
+                )}
+                <span className="text-[15px] font-bold" style={{ color: 'var(--ink)' }}>
+                  {product.discountedPrice ?? product.basePrice}
                 </span>
+                {product.discountText && product.basePrice && (
+                  <span className="text-[13px] line-through" style={{ color: 'var(--muted)' }}>{product.basePrice}</span>
+                )}
+              </div>
+              {/* Prix KR */}
+              {krProduct && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>KR</span>
+                  {krProduct.discountText && (
+                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: 'var(--promo-bg)' }}>
+                      {krProduct.discountText}
+                    </span>
+                  )}
+                  <span className="text-[15px] font-bold" style={{ color: 'var(--ink)' }}>
+                    {krEur != null ? `€${krEur.toFixed(2)}` : (krProduct.discountedPrice ?? krProduct.basePrice)}
+                  </span>
+                </div>
               )}
-              <span className="text-[15px] font-bold" style={{ color: 'var(--ink)' }}>
-                {product.discountedPrice ?? product.basePrice}
-              </span>
-              {product.discountText && product.basePrice && (
-                <span className="text-[13px] line-through" style={{ color: 'var(--muted)' }}>{product.basePrice}</span>
-              )}
-            </div>
+            </>
           ) : null}
         </div>
       </button>
@@ -122,7 +151,9 @@ export default function SlugSearchPage() {
   const slug = useSlug()
 
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<SearchResults>({ games: [], addons: [], demos: [] })
+  const [results, setResults] = useState<SearchResults>({ games: [], addons: [], demos: [], krGames: [] })
+  const [krMatchMap, setKrMatchMap] = useState<Map<string, PSNProduct>>(new Map())
+  const [krwRate, setKrwRate] = useState(0)
   const [userGameIds, setUserGameIds] = useState<Set<string>>(new Set())
   const [selected, setSelected] = useState<PSNProduct | null>(null)
   const [comparison, setComparison] = useState<PriceResult | null>(null)
@@ -132,6 +163,14 @@ export default function SlugSearchPage() {
   const [toast, setToast] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mainRef = useRef<HTMLDivElement>(null)
+
+  // Fetch exchange rate once (KRW per 1 EUR)
+  useEffect(() => {
+    fetch('/api/exchange')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.rate && d.rate > 0) setKrwRate(Math.round(1 / d.rate)) })
+      .catch(() => {})
+  }, [])
 
   // Load user's existing games to detect already-added items
   useEffect(() => {
@@ -158,14 +197,14 @@ export default function SlugSearchPage() {
 
   const doSearch = useCallback(async (q: string) => {
     if (!q.trim()) {
-      setResults({ games: [], addons: [], demos: [] })
+      setResults({ games: [], addons: [], demos: [], krGames: [] })
       setPhase('idle')
       setError(null)
       return
     }
     setPhase('searching')
     setError(null)
-    setResults({ games: [], addons: [], demos: [] })
+    setResults({ games: [], addons: [], demos: [], krGames: [] })
     setSelected(null)
     setComparison(null)
 
@@ -178,6 +217,13 @@ export default function SlugSearchPage() {
       } else {
         setResults(data)
         setPhase('results')
+        // Match KR products to FR products for inline display
+        const map = new Map<string, PSNProduct>()
+        ;(data.games as PSNProduct[]).forEach(fr => {
+          const { kr } = matchProducts([fr], data.krGames as PSNProduct[] ?? [])
+          if (kr) map.set(fr.id, kr)
+        })
+        setKrMatchMap(map)
       }
     } catch {
       setError('Erreur réseau.')
@@ -208,7 +254,7 @@ export default function SlugSearchPage() {
       doSearch('demo')
     } else {
       setPhase('idle')
-      setResults({ games: [], addons: [], demos: [] })
+      setResults({ games: [], addons: [], demos: [], krGames: [] })
     }
   }
 
@@ -395,6 +441,8 @@ export default function SlugSearchPage() {
                       {i > 0 && <div className="h-px mx-4" style={{ backgroundColor: 'var(--sep)' }} />}
                       <ProductRow
                         product={product}
+                        krProduct={null}
+                        krwRate={0}
                         isAdded={userGameIds.has(product.id)}
                         onClick={() => handleSelect(product)}
                         onQuickAdd={() => handleQuickAdd(product)}
@@ -423,6 +471,8 @@ export default function SlugSearchPage() {
                           {i > 0 && <div className="h-px mx-4" style={{ backgroundColor: 'var(--sep)' }} />}
                           <ProductRow
                             product={product}
+                            krProduct={krMatchMap.get(product.id) ?? null}
+                            krwRate={krwRate}
                             isAdded={userGameIds.has(product.id)}
                             onClick={() => handleSelect(product)}
                             onQuickAdd={() => handleQuickAdd(product)}
