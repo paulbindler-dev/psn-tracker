@@ -50,6 +50,7 @@ function EmptyState({ slug }: { slug: string }) {
 
 async function registerPushSubscription(slug: string): Promise<void> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+  if (typeof Notification === 'undefined') return
 
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') return
@@ -108,7 +109,7 @@ export function GameList() {
     navigator.serviceWorker.register('/sw.js').catch(() => {})
 
     // Only subscribe if permission already granted (don't auto-prompt on load)
-    if (Notification.permission === 'granted') {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       registerPushSubscription(slug).catch(() => {})
     }
   }, [slug])

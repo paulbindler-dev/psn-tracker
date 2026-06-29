@@ -26,9 +26,6 @@ export default function SlugError({ error, reset }: { error: Error & { digest?: 
       <p className="text-[17px] font-semibold mb-2" style={{ color: 'var(--ink)' }}>
         Une erreur est survenue
       </p>
-      <p className="text-[12px] mb-4 max-w-xs break-all font-mono" style={{ color: '#ef4444' }}>
-        {error?.message || 'Unknown error'}
-      </p>
       <p className="text-[14px] mb-8" style={{ color: 'var(--muted)' }}>
         Recharge la page ou réessaie.
       </p>
