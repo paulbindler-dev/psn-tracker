@@ -46,22 +46,31 @@ export function matchProducts(
     }
   }
 
-  // 2. Title similarity fallback (used when all FR suffixes are generic)
+  // 2. Title similarity fallback
   const frGame = frProducts[0]
   const frNorm = normTitle(frGame.name)
 
   const kr =
     krProducts.find((k) => {
       const kNorm = normTitle(k.name)
-      // Guard: never match when either side has no recognisable Latin chars
-      if (frNorm.length === 0 || kNorm.length === 0) return false
-      const minLen = Math.min(frNorm.length, kNorm.length, 8)
-      return (
-        frNorm.slice(0, minLen) === kNorm.slice(0, minLen) ||
-        (kNorm.length >= 4 && kNorm.includes(frNorm.slice(0, 6))) ||
-        (frNorm.length >= 4 && frNorm.includes(kNorm.slice(0, 6)))
-      )
+      if (frNorm.length < 4 || kNorm.length < 4) return false
+
+      // Shared prefix: both titles must start identically for ≥6 chars
+      const prefixLen = Math.min(frNorm.length, kNorm.length, 8)
+      if (prefixLen >= 6 && frNorm.slice(0, prefixLen) === kNorm.slice(0, prefixLen)) return true
+
+      // Substring: only when the matching substring is ≥8 chars (avoids "gate3" ⊂ "baldursgate3")
+      if (kNorm.length >= 8 && frNorm.includes(kNorm.slice(0, 8))) return true
+      if (frNorm.length >= 8 && kNorm.includes(frNorm.slice(0, 8))) return true
+
+      return false
     }) ?? null
 
   return { fr: frGame, kr }
+}
+
+/** Suffix-only match — zero false positives, used in search result lists. */
+export function matchBySuffix(fr: PSNProduct, krProducts: PSNProduct[]): PSNProduct | null {
+  if (GENERIC_SUFFIXES.has(fr.suffix)) return null
+  return krProducts.find((k) => k.suffix === fr.suffix) ?? null
 }

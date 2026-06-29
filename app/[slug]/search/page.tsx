@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { MagnifyingGlass, X, StarFour, Check } from '@phosphor-icons/react'
 import { useSlug } from '@/lib/slug-context'
 import { PSNProduct, PriceResult, Game } from '@/lib/types'
-import { matchProducts } from '@/lib/game-matcher'
+import { matchBySuffix } from '@/lib/game-matcher'
 
 type Phase = 'idle' | 'searching' | 'results' | 'confirming' | 'adding'
 type ViewFilter = 'all' | 'PS5' | 'PS4' | 'DEMO'
@@ -161,6 +161,8 @@ export default function SlugSearchPage() {
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<ViewFilter>('all')
   const [toast, setToast] = useState<string | null>(null)
+  const [browseDemos, setBrowseDemos] = useState<PSNProduct[]>([])
+  const [browseLoading, setBrowseLoading] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mainRef = useRef<HTMLDivElement>(null)
 
@@ -217,10 +219,10 @@ export default function SlugSearchPage() {
       } else {
         setResults(data)
         setPhase('results')
-        // Match KR products to FR products for inline display
+        // Match KR products to FR via suffix-only — avoids false title matches
         const map = new Map<string, PSNProduct>()
         ;(data.games as PSNProduct[]).forEach(fr => {
-          const { kr } = matchProducts([fr], data.krGames as PSNProduct[] ?? [])
+          const kr = matchBySuffix(fr, data.krGames ?? [])
           if (kr) map.set(fr.id, kr)
         })
         setKrMatchMap(map)
@@ -230,6 +232,18 @@ export default function SlugSearchPage() {
       setPhase('idle')
     }
   }, [])
+
+  // Auto-load demos when DEMO filter selected with no active search query
+  useEffect(() => {
+    if (filter !== 'DEMO' || query.trim()) return
+    if (browseDemos.length > 0 || browseLoading) return
+    setBrowseLoading(true)
+    fetch('/api/demos')
+      .then(r => r.ok ? r.json() : { demos: [] })
+      .then(d => setBrowseDemos(d.demos ?? []))
+      .catch(() => {})
+      .finally(() => setBrowseLoading(false))
+  }, [filter, query, browseDemos.length, browseLoading])
 
   const prevFilter = useRef<ViewFilter>('all')
   useEffect(() => { prevFilter.current = filter }, [filter])
@@ -324,7 +338,12 @@ export default function SlugSearchPage() {
   const platformFilter = filter === 'DEMO' ? 'all' : filter as 'all' | 'PS5' | 'PS4'
   const visibleGames   = filter === 'DEMO' ? [] : filterItems(results.games, platformFilter)
   const visibleAddons  = filter === 'DEMO' ? [] : filterItems(results.addons, platformFilter)
-  const visibleDemos   = filter === 'DEMO' ? results.demos.filter(p => p.platforms.includes('PS5')) : []
+  // With a query: show search demos; without query: show browse demos
+  const visibleDemos   = filter === 'DEMO'
+    ? (query.trim()
+        ? results.demos.filter(p => p.platforms.includes('PS5'))
+        : browseDemos)
+    : []
 
   const kr = comparison?.kr
   const krEur = kr?.priceEur
@@ -414,12 +433,33 @@ export default function SlugSearchPage() {
 
         {phase === 'idle' && !error && (
           filter === 'DEMO' ? (
-            <div className="flex flex-col items-center justify-center py-20 px-8 gap-4" style={{ color: 'var(--muted)' }}>
-              <MagnifyingGlass size={56} weight="light" color="var(--muted)" />
-              <p className="text-[15px] text-center leading-relaxed" style={{ color: 'var(--muted)' }}>
-                Tape le titre d&apos;un jeu pour trouver sa démo PS5
-              </p>
-            </div>
+            browseLoading ? (
+              <div className="flex justify-center py-12">
+                <span className="text-[15px]" style={{ color: 'var(--muted)' }}>Chargement des démos…</span>
+              </div>
+            ) : browseDemos.length > 0 ? (
+              <div>
+                {browseDemos.map((product, i) => (
+                  <div key={product.id}>
+                    {i > 0 && <div className="h-px mx-4" style={{ backgroundColor: 'var(--sep)' }} />}
+                    <ProductRow
+                      product={product}
+                      krProduct={null}
+                      krwRate={0}
+                      isAdded={userGameIds.has(product.id)}
+                      onClick={() => handleSelect(product)}
+                      onQuickAdd={() => handleQuickAdd(product)}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 px-8 gap-4">
+                <p className="text-[15px] text-center leading-relaxed" style={{ color: 'var(--muted)' }}>
+                  Aucune démo PS5 disponible pour le moment
+                </p>
+              </div>
+            )
           ) : <SearchEmptyState />
         )}
 
