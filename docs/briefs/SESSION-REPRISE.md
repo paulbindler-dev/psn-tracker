@@ -24,7 +24,7 @@ Il existe un vieux fichier `BRIEF-REPRISE.md` à la racine du projet. **Il est O
 
 ## Contexte projet
 
-App web de suivi de prix PSN (PlayStation Store) pour Paul Bindler, notaire.
+App web de suivi de prix PSN (PlayStation Store) pour Paul Bindler, 
 - **URL prod** : `https://psn-tracker-chi.vercel.app`
 - **Stack** : Next.js 14 App Router, TypeScript strict, Tailwind, **Neon Postgres** (`@neondatabase/serverless`), Vercel
 - **Icônes** : `@phosphor-icons/react` v2.1.10 (requis dans `transpilePackages` dans `next.config.mjs`)
@@ -94,6 +94,67 @@ CREATE TABLE games (
 - Panneau de confirmation : scroll to top automatique
 - TabBar : 2 onglets seulement (Liste + Rechercher, onglet Démos supprimé)
 - Notifications push web (VAPID, Vercel Cron 09:00)
+
+---
+
+## Feature P0 — Redesign pixel-perfect PSN (PRIORITÉ ABSOLUE)
+
+### Vision
+L'app doit avoir le **feeling PSN officiel** — comme si c'était une extension de l'app PlayStation. Pas un "clone", mais une cohérence visuelle totale : mêmes couleurs, même typographie, mêmes composants, mêmes icônes.
+
+Paul va faire une inspection DevTools du site PSN mobile **avant la prochaine session** pour extraire les assets nécessaires. Voici ce qu'il faut récupérer et comment s'en servir.
+
+### Ce que Paul doit rapporter (inspection DevTools PSN mobile)
+
+**Méthode** : Chrome → DevTools → Toggle Device Toolbar (icône mobile) → ouvrir `store.playstation.com/fr-fr`
+
+**1. Couleurs exactes** — Dans DevTools → Éléments, inspecter le fond, les cartes, le texte :
+```js
+// Dans la Console PSN, extrait les CSS variables du thème
+Object.fromEntries(
+  [...document.styleSheets]
+    .flatMap(s => { try { return [...s.cssRules] } catch { return [] } })
+    .filter(r => r.selectorText === ':root')
+    .flatMap(r => [...r.style])
+    .map(p => [p, getComputedStyle(document.documentElement).getPropertyValue(p)])
+)
+```
+
+**2. Typographie** — Inspecter le nom du jeu sur une fiche produit :
+- Font-family utilisée (PSN utilise souvent une police maison ou une variante de SST)
+- Tailles de texte (titre, prix, badge)
+- Font-weight des prix
+
+**3. Icônes et badges** — Inspecter directement dans le DOM :
+- Badge PS5 / PS4 (petit badge bleu/blanc sur les covers)
+- Badge PS+ Extra (étoile + texte "EXTRA")
+- Badge PS+ Premium
+- Icône manette PlayStation
+- Notation / étoiles si présentes
+
+Pour chaque icône : clic droit → "Inspecter" → chercher `<img src="...">` ou `<svg>...</svg>` dans le DOM
+
+**4. Cards jeux** — Inspecter une carte jeu dans les résultats de recherche :
+- Border-radius exact
+- Padding
+- Ombre (box-shadow)
+- Disposition cover / titre / prix
+
+**5. Header et navigation** — Inspecter la barre de navigation PSN mobile :
+- Hauteur
+- Couleur de fond
+- Icônes de navigation
+
+### Ce qu'on fera avec ces assets
+
+Une fois les assets récupérés, on refera l'app complète :
+- Remplacer les CSS variables actuelles par les valeurs PSN exactes
+- Intégrer les vraies icônes PS+ dans `GameCard` (P3)
+- Refaire les badges plateforme (PS5/PS4) avec le style PSN
+- Refaire les `ProductRow` dans la recherche pour matcher le style PSN
+- Refaire le `TabBar` pour matcher la navigation PSN
+
+**Ce n'est PAS un redesign from scratch** — on garde la structure de l'app, on remplace juste le skin visuel par le skin PSN officiel.
 
 ---
 
