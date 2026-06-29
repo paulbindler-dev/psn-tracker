@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import Image from 'next/image'
-import { StarFour } from '@phosphor-icons/react'
+import { StarFour, Bell } from '@phosphor-icons/react'
 import { PriceResult, Game } from '@/lib/types'
 import { ActionSheet } from './ActionSheet'
 
@@ -10,6 +10,7 @@ interface Props {
   prices: PriceResult | null
   loading: boolean
   onDelete: (id: string) => void
+  onToggleNotify: (id: string, next: boolean) => void
   currency: 'EUR' | 'KRW'
 }
 
@@ -19,14 +20,16 @@ function parseFrEur(priceStr: string | null | undefined): number {
 }
 
 const DELETE_THRESHOLD = 80
+const NOTIFY_THRESHOLD = 80
 
-export function GameCard({ game, prices, loading, onDelete, currency }: Props) {
+export function GameCard({ game, prices, loading, onDelete, onToggleNotify, currency }: Props) {
   const [showActions, setShowActions] = useState(false)
   const [swipeX, setSwipeX] = useState(0)
   const [animating, setAnimating] = useState(false)
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
   const isDragging = useRef(false)
+  const dirLocked = useRef<'left' | 'right' | null>(null)
 
   const fr = prices?.fr
   const kr = prices?.kr
@@ -54,12 +57,17 @@ export function GameCard({ game, prices, loading, onDelete, currency }: Props) {
   const actions = [
     ...(fr?.storeUrl ? [{ label: 'Ouvrir sur PSN France', href: fr.storeUrl }] : []),
     ...(kr?.storeUrl ? [{ label: 'Ouvrir sur PSN Corée', href: kr.storeUrl }] : []),
+    {
+      label: game.notify ? 'Désactiver la notif' : 'Activer la notif',
+      onClick: () => onToggleNotify(game.id, !game.notify),
+    },
     { label: 'Supprimer de la liste', onClick: () => onDelete(game.id), destructive: true },
   ]
 
   const resetSwipe = () => {
     setAnimating(true)
     setSwipeX(0)
+    dirLocked.current = null
     setTimeout(() => setAnimating(false), 300)
   }
 
@@ -67,22 +75,38 @@ export function GameCard({ game, prices, loading, onDelete, currency }: Props) {
     touchStartX.current = e.touches[0].clientX
     touchStartY.current = e.touches[0].clientY
     isDragging.current = false
+    dirLocked.current = null
   }
 
   const onTouchMove = (e: React.TouchEvent) => {
     const dx = e.touches[0].clientX - touchStartX.current
     const dy = e.touches[0].clientY - touchStartY.current
-    if (!isDragging.current && Math.abs(dy) > Math.abs(dx)) return
-    isDragging.current = true
-    if (dx < 0) setSwipeX(Math.max(dx, -DELETE_THRESHOLD - 20))
+
+    if (!isDragging.current) {
+      if (Math.abs(dy) > Math.abs(dx)) return // vertical scroll
+      if (Math.abs(dx) < 5) return
+      isDragging.current = true
+      dirLocked.current = dx < 0 ? 'left' : 'right'
+    }
+
+    if (dirLocked.current === 'left') {
+      setSwipeX(Math.max(dx, -DELETE_THRESHOLD - 20))
+    } else if (dirLocked.current === 'right') {
+      setSwipeX(Math.min(dx, NOTIFY_THRESHOLD + 20))
+    }
   }
 
   const onTouchEnd = () => {
     if (!isDragging.current) return
     if (swipeX < -DELETE_THRESHOLD) {
+      // Sticky delete zone
       setAnimating(true)
       setSwipeX(-DELETE_THRESHOLD)
       setTimeout(() => setAnimating(false), 200)
+    } else if (swipeX > NOTIFY_THRESHOLD) {
+      // Trigger notify toggle + snap back
+      onToggleNotify(game.id, !game.notify)
+      resetSwipe()
     } else {
       resetSwipe()
     }
@@ -93,7 +117,6 @@ export function GameCard({ game, prices, loading, onDelete, currency }: Props) {
     setShowActions(true)
   }
 
-  /* Subtitle row: "Carte" / "Offre groupée" */
   const subtitle = fr
     ? fr.psPlusTier === null &&
       (fr.name?.toLowerCase().includes('bundle') || game.title.toLowerCase().includes('bundle'))
@@ -104,7 +127,20 @@ export function GameCard({ game, prices, loading, onDelete, currency }: Props) {
   return (
     <>
       <div className="relative overflow-hidden">
-        {/* Delete zone */}
+        {/* Notify zone (left side, revealed by right swipe) */}
+        <div
+          className="absolute inset-y-0 left-0 w-20 flex items-center justify-center"
+          style={{ backgroundColor: '#0070d1' }}
+        >
+          <div className="flex flex-col items-center gap-1 text-white">
+            <Bell size={22} weight={game.notify ? 'fill' : 'regular'} />
+            <span className="text-[11px] font-semibold">
+              {game.notify ? 'ON' : 'OFF'}
+            </span>
+          </div>
+        </div>
+
+        {/* Delete zone (right side, revealed by left swipe) */}
         <div className="absolute inset-y-0 right-0 w-20 bg-[#ef4444] flex items-center justify-center">
           <button
             onClick={() => onDelete(game.id)}
@@ -168,13 +204,18 @@ export function GameCard({ game, prices, loading, onDelete, currency }: Props) {
 
           {/* Text content */}
           <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-            {/* Title */}
-            <p
-              className="text-[15px] font-normal leading-[1.3] line-clamp-2"
-              style={{ color: 'var(--ink)' }}
-            >
-              {game.title}
-            </p>
+            {/* Title row with notify bell indicator */}
+            <div className="flex items-start gap-1">
+              <p
+                className="text-[15px] font-normal leading-[1.3] line-clamp-2 flex-1"
+                style={{ color: 'var(--ink)' }}
+              >
+                {game.title}
+              </p>
+              {game.notify && (
+                <Bell size={13} weight="fill" color="#0070d1" className="mt-0.5 flex-shrink-0" />
+              )}
+            </div>
 
             {/* Subtitle (Carte / Offre groupée) */}
             {subtitle && (

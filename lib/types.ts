@@ -55,6 +55,13 @@ export interface Game {
   kr_product_id: string | null
   user_id: string | null
   added_at: string
+  notify: boolean
+}
+
+export interface PushSubscriptionRow {
+  endpoint: string
+  p256dh: string
+  auth: string
 }
 
 export type SortKey = 'promo' | 'saving' | 'price_fr_asc' | 'price_fr_desc' | 'name_az' | 'name_za' | 'added_recent' | 'added_old'

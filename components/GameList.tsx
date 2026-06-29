@@ -48,6 +48,33 @@ function EmptyState({ slug }: { slug: string }) {
   )
 }
 
+async function registerPushSubscription(slug: string): Promise<void> {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+
+  const permission = await Notification.requestPermission()
+  if (permission !== 'granted') return
+
+  const reg = await navigator.serviceWorker.ready
+  const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  if (!vapidKey) return
+
+  // Convert base64 URL-safe to Uint8Array
+  const urlB64 = vapidKey.replace(/-/g, '+').replace(/_/g, '/')
+  const raw = atob(urlB64)
+  const arr = new Uint8Array(raw.length)
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i)
+
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: arr,
+  })
+
+  await fetch(`/api/push/subscribe?slug=${slug}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sub.toJSON()),
+  })
+}
 
 export function GameList() {
   const slug = useSlug()
@@ -71,6 +98,19 @@ export function GameList() {
         if (user?.currency === 'EUR' || user?.currency === 'KRW') setCurrency(user.currency)
       })
       .catch(() => {})
+  }, [slug])
+
+  // Register service worker + push subscription
+  useEffect(() => {
+    if (!slug || typeof window === 'undefined') return
+    if (!('serviceWorker' in navigator)) return
+
+    navigator.serviceWorker.register('/sw.js').catch(() => {})
+
+    // Only subscribe if permission already granted (don't auto-prompt on load)
+    if (Notification.permission === 'granted') {
+      registerPushSubscription(slug).catch(() => {})
+    }
   }, [slug])
 
   const fetchGames = useCallback(async () => {
@@ -111,17 +151,14 @@ export function GameList() {
     const gameToDelete = games.find(g => g.id === id)
     if (!gameToDelete) return
 
-    // Masquer localement immédiatement
     setGames(g => g.filter(game => game.id !== id))
 
-    // Si un delete était déjà en attente, l'exécuter maintenant
     if (pendingDelete) {
       clearTimeout(pendingDelete.timer)
       fetch(`/api/games/${pendingDelete.id}?slug=${slug}`, { method: 'DELETE' })
       setPrices(p => { const { [pendingDelete.id]: _, ...rest } = p; return rest })
     }
 
-    // Programmer le DELETE réel dans 3s
     const timer = setTimeout(() => {
       fetch(`/api/games/${id}?slug=${slug}`, { method: 'DELETE' })
       setPendingDelete(null)
@@ -149,6 +186,25 @@ export function GameList() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ currency: next }),
     }).catch(() => {})
+  }
+
+  const handleToggleNotify = async (id: string, next: boolean) => {
+    // Optimistic update
+    setGames(gs => gs.map(g => g.id === id ? { ...g, notify: next } : g))
+
+    // If turning ON, request push permission + subscribe
+    if (next && slug) {
+      await registerPushSubscription(slug).catch(() => {})
+    }
+
+    await fetch(`/api/games/${id}?slug=${slug}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notify: next }),
+    }).catch(() => {
+      // Rollback on error
+      setGames(gs => gs.map(g => g.id === id ? { ...g, notify: !next } : g))
+    })
   }
 
   const sorted = [...games].sort((a, b) => {
@@ -230,6 +286,7 @@ export function GameList() {
               prices={prices[game.id] ?? null}
               loading={loading[game.id] ?? false}
               onDelete={handleDelete}
+              onToggleNotify={handleToggleNotify}
               currency={currency}
             />
           ))
