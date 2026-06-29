@@ -26,7 +26,9 @@ export async function fetchProductById(
   region: 'fr-fr' | 'ko-kr'
 ): Promise<PSNProduct | null> {
   const lang = region === 'fr-fr' ? 'fr-FR' : 'ko-KR'
-  const url = `https://store.playstation.com/${region}/product/${productId}`
+  // PSN product pages no longer embed full data — use the search endpoint instead,
+  // which still returns Apollo state with price/media/platforms.
+  const url = `https://store.playstation.com/${region}/search/${encodeURIComponent(productId)}`
 
   const res = await fetch(url, {
     headers: { ...PSN_HEADERS, 'Accept-Language': lang },

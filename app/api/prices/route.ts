@@ -32,20 +32,13 @@ export async function GET(req: NextRequest) {
   const exchangeResPromise = fetch(`${req.nextUrl.origin}/api/exchange`)
 
   if (frId || krId) {
-    // Fetch by ID (possibly alongside title-based search for the other region)
+    // Fetch by ID, with title fallback when ID lookup fails
     const tasks: Promise<void>[] = []
 
     if (frId) {
       tasks.push(
         fetchProductById(frId, 'fr-fr').then((p) => {
-          frProduct = p
-          if (p) frProducts = [p]
-        })
-      )
-    } else if (title) {
-      tasks.push(
-        searchPSN('fr-fr', title).then((ps) => {
-          frProducts = ps
+          if (p) { frProduct = p; frProducts = [p] }
         })
       )
     }
@@ -53,11 +46,13 @@ export async function GET(req: NextRequest) {
     if (krId) {
       tasks.push(
         fetchProductById(krId, 'ko-kr').then((p) => {
-          krProduct = p
-          if (p) krProducts = [p]
+          if (p) { krProduct = p; krProducts = [p] }
         })
       )
-    } else if (title) {
+    }
+
+    // Always search KR by title when no krId — needed for price comparison
+    if (!krId && title) {
       tasks.push(
         searchPSN('ko-kr', title).then((ps) => {
           krProducts = ps
@@ -67,14 +62,22 @@ export async function GET(req: NextRequest) {
 
     await Promise.all(tasks)
 
-    // If frId not provided but title was, run matchProducts to pick best FR
-    if (!frId && title) {
+    // Fallback: if frId lookup returned nothing, try title search
+    if (frId && frProducts.length === 0 && title) {
+      frProducts = await searchPSN('fr-fr', title)
+    }
+
+    // Fallback: if krId lookup returned nothing, try title search
+    if (krId && krProducts.length === 0 && title) {
+      krProducts = await searchPSN('ko-kr', title)
+    }
+
+    if (!frProduct) {
       const matched = matchProducts(frProducts, krProducts)
       frProduct = matched.fr
     }
 
-    // If krId not provided but title was, pick KR via matchProducts
-    if (!krId && title && !krProduct) {
+    if (!krProduct) {
       const matched = matchProducts(frProducts, krProducts)
       krProduct = matched.kr
     }

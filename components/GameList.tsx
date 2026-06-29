@@ -124,15 +124,10 @@ export function GameList() {
     data.forEach((game, index) => {
       setTimeout(() => {
         setLoading((l) => ({ ...l, [game.id]: true }))
-        const priceUrl =
-          game.fr_product_id || game.kr_product_id
-            ? `/api/prices?${new URLSearchParams(
-                Object.fromEntries(
-                  Object.entries({ fr_id: game.fr_product_id, kr_id: game.kr_product_id })
-                    .filter(([, v]) => v != null) as [string, string][]
-                )
-              ).toString()}`
-            : `/api/prices?title=${encodeURIComponent(game.title)}`
+        const priceParams = new URLSearchParams({ title: game.title })
+        if (game.fr_product_id) priceParams.set('fr_id', game.fr_product_id)
+        if (game.kr_product_id) priceParams.set('kr_id', game.kr_product_id)
+        const priceUrl = `/api/prices?${priceParams.toString()}`
         fetch(priceUrl)
           .then((r) => {
             if (!r.ok) return null

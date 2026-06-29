@@ -95,20 +95,20 @@ describe('fetchProductById', () => {
     expect(result).toBeNull()
   })
 
-  it('construit la bonne URL pour fr-fr', async () => {
+  it('utilise /search/ (product pages ne contiennent plus les données complètes)', async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({ ok: false })
     await fetchProductById('EP0001-TEST', 'fr-fr')
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://store.playstation.com/fr-fr/product/EP0001-TEST',
+      'https://store.playstation.com/fr-fr/search/EP0001-TEST',
       expect.any(Object)
     )
   })
 
-  it('construit la bonne URL pour ko-kr', async () => {
+  it('construit la bonne URL pour ko-kr via /search/', async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({ ok: false })
     await fetchProductById('EP0001-TEST', 'ko-kr')
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://store.playstation.com/ko-kr/product/EP0001-TEST',
+      'https://store.playstation.com/ko-kr/search/EP0001-TEST',
       expect.any(Object)
     )
   })
