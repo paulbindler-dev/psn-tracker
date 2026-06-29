@@ -17,53 +17,47 @@ export async function GET(req: NextRequest) {
   const krId = req.nextUrl.searchParams.get('kr_id')
   const title = req.nextUrl.searchParams.get('title')
 
-  if (!frId && !title) {
-    return NextResponse.json({ error: 'title or fr_id parameter required' }, { status: 400 })
+  if (!title && !frId) {
+    return NextResponse.json({ error: 'title or fr_id required' }, { status: 400 })
   }
 
-  // Fetch FR product
   let frProduct: PSNProduct | null = null
-  let frProducts: PSNProduct[] = []
-
-  // Fetch KR product
   let krProduct: PSNProduct | null = null
+  let frProducts: PSNProduct[] = []
   let krProducts: PSNProduct[] = []
 
   const exchangeResPromise = fetch(`${req.nextUrl.origin}/api/exchange`)
 
-  if (frId || krId) {
-    // Phase 1: exact ID lookup (no fuzzy fallback)
-    await Promise.all([
-      frId ? fetchProductById(frId, 'fr-fr').then((p) => { if (p) { frProduct = p; frProducts = [p] } }) : Promise.resolve(),
-      krId ? fetchProductById(krId, 'ko-kr').then((p) => { if (p) { krProduct = p; krProducts = [p] } }) : Promise.resolve(),
-    ])
-
-    // Phase 2: title search for any region where ID lookup returned nothing
-    const needFrSearch = frProducts.length === 0 && !!title
-    const needKrSearch = krProducts.length === 0 && !!title  // also covers no krId case
-    if (needFrSearch || needKrSearch) {
-      await Promise.all([
-        needFrSearch ? searchPSN('fr-fr', title!).then((ps) => { frProducts = ps }) : Promise.resolve(),
-        needKrSearch ? searchPSN('ko-kr', title!).then((ps) => { krProducts = ps }) : Promise.resolve(),
-      ])
-    }
-
-    // Phase 3: match best products from whatever we collected
-    const matched = matchProducts(frProducts, krProducts)
-    if (!frProduct) frProduct = matched.fr
-    if (!krProduct) krProduct = matched.kr
-  } else {
-    // Classic title-based search for both regions
+  // STRATEGY: Title search is always the primary source (PSN search pages still embed
+  // full Apollo state with price + cover + platforms). Stored product IDs are used only
+  // as edition-selection hints after the search.
+  if (title) {
     const [fr, kr] = await Promise.all([
-      searchPSN('fr-fr', title!),
-      searchPSN('ko-kr', title!),
+      searchPSN('fr-fr', title),
+      searchPSN('ko-kr', title),
     ])
     frProducts = fr
     krProducts = kr
 
     const matched = matchProducts(frProducts, krProducts)
-    frProduct = matched.fr
-    krProduct = matched.kr
+
+    // If we have a stored ID, prefer the exact edition in the search results
+    frProduct = (frId ? frProducts.find((p) => p.id === frId) : null) ?? matched.fr
+    krProduct = (krId ? krProducts.find((p) => p.id === krId) : null) ?? matched.kr
+  } else if (frId || krId) {
+    // No title (legacy path) — fall back to ID-based search
+    const [frP, krP] = await Promise.all([
+      frId ? fetchProductById(frId, 'fr-fr') : Promise.resolve(null),
+      krId ? fetchProductById(krId, 'ko-kr') : Promise.resolve(null),
+    ])
+    if (frP) { frProduct = frP; frProducts = [frP] }
+    if (krP) { krProduct = krP; krProducts = [krP] }
+
+    if (!frProduct || !krProduct) {
+      const matched = matchProducts(frProducts, krProducts)
+      if (!frProduct) frProduct = matched.fr
+      if (!krProduct) krProduct = matched.kr
+    }
   }
 
   const exchangeRes = await exchangeResPromise
@@ -83,7 +77,6 @@ export async function GET(req: NextRequest) {
     ? 'EXTRA'
     : null
 
-  // Demo detection: when fetching by ID we only have that product, so demos won't appear
   const frHasDemo = frProducts.some((p) => p.storeDisplayClassification === 'DEMO')
   const krHasDemo = krProducts.some((p) => p.storeDisplayClassification === 'DEMO')
 
