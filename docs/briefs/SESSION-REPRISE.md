@@ -4,66 +4,150 @@
 
 ---
 
-## ⚠️ IMPORTANT — Fichier BRIEF-REPRISE.md à la racine
+## 🔴 PIVOT MAJEUR — Session du 2026-06-29
 
-Il existe un vieux fichier `BRIEF-REPRISE.md` à la racine du projet. **Il est OBSOLÈTE — ne pas l'utiliser.** Il date du démarrage du projet sur Supabase, avant la migration vers Neon. Ce fichier SESSION-REPRISE.md est la référence à jour.
+**L'app PSN Tracker n'est plus le focus principal.** On a décidé de pivoter vers un **bookmarklet/Tampermonkey** qui injecte les prix KR directement dans la vraie wishlist PSN officielle (`library.playstation.com/wishlist`).
+
+### Pourquoi ce pivot
+- PSN fait déjà nativement : wishlist persistante, notifications promo, indicateurs PS+
+- La seule valeur unique de notre app = le prix KR
+- Autant injecter ce prix dans la vraie wishlist PSN plutôt que reconstruire une app clone
+
+### L'app existante
+- **Toujours déployée et fonctionnelle** sur `https://psn-tracker-chi.vercel.app`
+- **Ne pas la toucher** — elle reste en veille, rien n'a été supprimé
+- Si le bookmarklet ne convient pas à Paul, on revient à l'app avec le matching corrigé
 
 ---
 
-## Base de données — NEON, pas Supabase
+## ⚠️ IMPORTANT — Base de données
 
 **Ce projet utilise Neon Postgres, PAS Supabase.**
-
 - Client : `@neondatabase/serverless` → `lib/db.ts` → `getSql()`
-- `lib/supabase.ts` existe mais n'est importé nulle part → code mort de l'ancienne version
-- Le package `@supabase/supabase-js` est dans `package.json` mais inutilisé → peut être supprimé
-- Les migrations SQL s'exécutent dans la **console Neon** (neon.tech → SQL Editor), pas dans Supabase
-- Connection string dans la variable d'environnement `DATABASE_URL` (Neon)
+- `lib/supabase.ts` existe mais n'est pas utilisé (code mort)
+- Migrations SQL dans la console Neon (neon.tech → SQL Editor)
+- Connection string : variable d'environnement `DATABASE_URL`
 
 ---
 
 ## Contexte projet
 
-App web de suivi de prix PSN (PlayStation Store) pour Paul Bindler, 
-- **URL prod** : `https://psn-tracker-chi.vercel.app`
-- **Stack** : Next.js 14 App Router, TypeScript strict, Tailwind, **Neon Postgres** (`@neondatabase/serverless`), Vercel
-- **Icônes** : `@phosphor-icons/react` v2.1.10 (requis dans `transpilePackages` dans `next.config.mjs`)
+App web de suivi de prix PSN (PlayStation Store) — usage personnel Paul Bindler.
+- **URL prod app** : `https://psn-tracker-chi.vercel.app`
+- **Stack app** : Next.js 14 App Router, TypeScript, Tailwind, Neon Postgres, Vercel
 - **Repo** : `/Volumes/SSD dock/Paulbindler.dock/Projets Claude/psn-tracker`
-
-**Principe** : chaque utilisateur a un slug unique (URL secrète). L'app compare les prix FR (store PlayStation France) et KR (store PlayStation Corée du Sud) des jeux PS5/PS4. En KR, les jeux coûtent souvent 30-60% moins cher. L'app aide à identifier ces économies.
+- **Principe** : comparer prix FR et KR des jeux PS5/PS4. KR souvent 30-60% moins cher.
 
 ---
 
-## Architecture technique clé
+## 🆕 BOOKMARKLET — État au 2026-06-29
+
+### Ce qu'on a construit
+
+**Fichiers créés :**
+```
+bookmarklet/
+  psn-kr-prices.source.js    — code source complet (IIFE, tout-en-un)
+  psn-kr-prices.user.js      — variante Tampermonkey (GM_xmlhttpRequest, auto-run)
+  psn-kr-prices.min.txt      — URL javascript: minifiée pour bookmarklet mobile Safari
+  build.js                   — script Node.js pour regénérer user.js + min.txt depuis source.js
+
+app/api/kr-search/route.ts   — proxy Vercel avec CORS headers (Access-Control-Allow-Origin: *)
+```
+
+**Specs et plan :**
+```
+docs/superpowers/specs/2026-06-29-psn-kr-bookmarklet-design.md
+docs/superpowers/plans/2026-06-29-psn-kr-bookmarklet.md
+```
+
+### Comment le bookmarklet fonctionne
+
+1. S'exécute sur `library.playstation.com/wishlist` (vraie wishlist PSN de Paul)
+2. Lit `window.__NEXT_DATA__.props.apolloState` → extrait les Product FR (id, name, price)
+3. Pour chaque jeu, appelle `https://psn-tracker-chi.vercel.app/api/kr-search?title=...` (proxy CORS)
+4. Le proxy fetche le store KR et retourne les produits KR en JSON
+5. Match par suffix d'ID produit (zéro faux positif)
+6. Injecte un badge KR sous le prix de chaque item wishlist
+
+### Résultats Phase 0 (validés)
+
+| Test | Résultat |
+|---|---|
+| `__NEXT_DATA__` wishlist | ✅ 61 produits avec prix. `storeDisplayClassification` absent → filtrer par `platforms` |
+| Sélecteurs DOM | ✅ Items : `li[data-qa^="wishlist-list-item"]` / Prix : `[data-qa$="#price#display-price"]` / Product ID : `data-telemetry-meta` JSON |
+| CORS direct PSN KR depuis library.playstation.com | ❌ Bloqué (origins différentes) → solution : proxy Vercel avec CORS headers |
+| Proxy Vercel `/api/kr-search` | ✅ Déployé en prod, répond correctement, CORS ok |
+| Suffix matching | ✅ Demon's Souls : match exact `DEMONSSOULS00000` → 79 800 ₩ |
+| Faux positif Mafia | ✅ Pas de match exact (suffix SIEE vs SIEA) → disambiguation panel (pas de faux positif) |
+| Taux de change `open.er-api.com` | ✅ 1 KRW = 0.000571 EUR, CORS ouvert depuis library.playstation.com |
+
+### Ce qui reste à faire (prochaine session)
+
+**Étape immédiate — test complet sur la vraie wishlist :**
+
+1. Aller sur `library.playstation.com/wishlist` dans Chrome
+2. F12 → Console → coller le contenu de `bookmarklet/psn-kr-prices.source.js`
+3. Vérifier :
+   - Log `[PSN KR] 60 jeux, 62 items DOM`
+   - Badges KR apparaissent sous les prix FR
+   - Prix corrects (pas de faux positifs)
+   - Cas Mafia → badge "🇰🇷 ? [Identifier →]"
+   - Cas Demon's Souls → badge "🇰🇷 XX,XX € −XX%"
+4. Si tout est bon → installer Tampermonkey (`psn-kr-prices.user.js`)
+5. Si des bugs → déboguer un par un
+
+**Commande pour copier le script dans le presse-papiers :**
+```bash
+cat "/Volumes/SSD dock/Paulbindler.dock/Projets Claude/psn-tracker/bookmarklet/psn-kr-prices.source.js" | pbcopy
+```
+
+**Après validation desktop :**
+- Installer dans Tampermonkey Chrome → auto-run sur la wishlist
+- Créer le bookmarklet Safari iOS (contenu de `bookmarklet/psn-kr-prices.min.txt`)
+- Instructions dans le plan : `docs/superpowers/plans/2026-06-29-psn-kr-bookmarklet.md` Task 1.10
+
+### Points techniques importants
+
+**Proxy Vercel :**
+- URL : `https://psn-tracker-chi.vercel.app/api/kr-search?title=...`
+- Retourne : `{ products: [{ id, suffix, name, coverUrl, basePrice, discountedPrice, ... }] }`
+- Headers CORS : `Access-Control-Allow-Origin: *`
+
+**Tampermonkey vs Bookmarklet :**
+- Tampermonkey utilise `GM_xmlhttpRequest` (bypass CORS natif) → fetch direct PSN KR, sans proxy
+- Bookmarklet utilise le proxy Vercel (nécessaire depuis library.playstation.com)
+- Les deux sont générés par `node bookmarklet/build.js`
+
+**Matching suffix :**
+- Certains jeux ont un suffix région-spécifique (ex: `SIEE` EU vs `SIEA` Asia) → pas de match exact → disambiguation panel
+- Suffixes génériques exclus (voir `GENERIC_SUFFIXES` dans le source)
+- Liens manuels sauvegardés en `localStorage` clé `psn-kr-links`
+
+---
+
+## Architecture technique app existante (inchangée)
 
 ### PSN Scraping (`lib/psn-scraper.ts`)
-PSN store est en Next.js SSR — les pages embarquent les données produit dans `__NEXT_DATA__` (Apollo state).
-- `searchPSN(region, title)` → fetch `https://store.playstation.com/{region}/search/{title}` → parse `__NEXT_DATA__`
-- `parseNextDataHtml(html)` → extrait tous les `Product:*` de l'Apollo state
-- `fetchPSNUrl(url, region)` → fetch n'importe quelle URL PSN + parse
-- **IMPORTANT** : les pages produit PSN (`/product/ID`) ne contiennent plus l'Apollo state depuis juin 2026. Seules les pages de recherche (`/search/QUERY`) fonctionnent.
+- `searchPSN(region, title)` → fetch search page → parse `__NEXT_DATA__`
+- **IMPORTANT** : pages produit PSN (`/product/ID`) ne contiennent plus l'Apollo state depuis juin 2026. Seules les pages de recherche (`/search/QUERY`) fonctionnent.
 
 ### Matching FR ↔ KR (`lib/game-matcher.ts`)
-- `matchProducts(frProducts, krProducts)` : 1) suffix exact sur l'ID produit, 2) fallback titre (≥6 chars prefix ou ≥8 chars substring)
-- `matchBySuffix(fr, krProducts)` : suffix-only, zéro faux positif — utilisé dans les résultats de recherche
+- `matchProducts(fr, kr)` : suffix exact puis fallback titre
+- `matchBySuffix(fr, krProducts)` : suffix-only, zéro faux positif
 
-### API routes clés
-- `/api/search?title=` → cherche FR + KR en parallèle, retourne `{ games, addons, demos, krGames }`
-- `/api/prices?fr_id=&title=` → fetch complet FR+KR avec matching, retourne `PriceResult`
-- `/api/demos` → tente pages catégorie PSN, fallback multi-search (voir bug ci-dessous)
+### API routes clés (app existante)
+- `/api/search?title=` → FR + KR en parallèle
+- `/api/prices?fr_id=&title=` → fetch complet avec matching
+- `/api/kr-search?title=` → **NOUVEAU** proxy KR avec CORS (pour bookmarklet)
 - `/api/exchange` → taux EUR/KRW
-- `/api/games?slug=` → CRUD liste de souhaits
-
-### Routing
-- `app/[slug]/page.tsx` → liste de souhaits (`GameList` + `GameCard`)
-- `app/[slug]/search/page.tsx` → recherche + ajout
-- Contexte slug via `SlugContext` / `useSlug()`
+- `/api/games?slug=` → CRUD liste de souhaits app
 
 ### Schéma DB (Neon)
 ```sql
 CREATE TABLE games (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,        -- slug
+  user_id TEXT NOT NULL,
   title TEXT NOT NULL,
   fr_product_id TEXT,
   kr_product_id TEXT,
@@ -72,205 +156,14 @@ CREATE TABLE games (
 );
 ```
 
-### Design system
-- CSS variables : `--bg`, `--surface`, `--ink`, `--muted`, `--sep`, `--tabbar`, `--promo-bg`
-- Mode clair/sombre automatique via `prefers-color-scheme`
-- Couleur principale : `#0070d1` (bleu PSN)
-- Police : système (San Francisco sur iOS)
-- **Pas de fond sombre ni violet**, pas d'emojis dans le code
-
 ---
 
-## État actuel — Ce qui fonctionne ✅
-
-- Liste de souhaits avec prix FR + KR, toggle EUR/KRW
-- Prix FR barré (promo) et prix KR barré affichés
-- Badge langue : vert `FR`/`EN` si dispo, rouge `KR` si KR uniquement
-- Header "Liste" propre avec toggle EUR/KRW + bouton tri
-- Modal tri avec body scroll lock, sans bouton annuler
-- Recherche : résultats FR + KR inline, prix KR via suffix matching (zéro faux positif)
-- Filtre pills PS5/PS4/Démo PS5 toujours visibles
-- Jeux déjà ajoutés : coche grise au lieu du `+` bleu
-- Panneau de confirmation : scroll to top automatique
-- TabBar : 2 onglets seulement (Liste + Rechercher, onglet Démos supprimé)
-- Notifications push web (VAPID, Vercel Cron 09:00)
-
----
-
-## Feature P0 — Redesign pixel-perfect PSN (PRIORITÉ ABSOLUE)
-
-### Vision
-L'app doit avoir le **feeling PSN officiel** — comme si c'était une extension de l'app PlayStation. Pas un "clone", mais une cohérence visuelle totale : mêmes couleurs, même typographie, mêmes composants, mêmes icônes.
-
-Paul va faire une inspection DevTools du site PSN mobile **avant la prochaine session** pour extraire les assets nécessaires. Voici ce qu'il faut récupérer et comment s'en servir.
-
-### Ce que Paul doit rapporter (inspection DevTools PSN mobile)
-
-**Méthode** : Chrome → DevTools → Toggle Device Toolbar (icône mobile) → ouvrir `store.playstation.com/fr-fr`
-
-**1. Couleurs exactes** — Dans DevTools → Éléments, inspecter le fond, les cartes, le texte :
-```js
-// Dans la Console PSN, extrait les CSS variables du thème
-Object.fromEntries(
-  [...document.styleSheets]
-    .flatMap(s => { try { return [...s.cssRules] } catch { return [] } })
-    .filter(r => r.selectorText === ':root')
-    .flatMap(r => [...r.style])
-    .map(p => [p, getComputedStyle(document.documentElement).getPropertyValue(p)])
-)
-```
-
-**2. Typographie** — Inspecter le nom du jeu sur une fiche produit :
-- Font-family utilisée (PSN utilise souvent une police maison ou une variante de SST)
-- Tailles de texte (titre, prix, badge)
-- Font-weight des prix
-
-**3. Icônes et badges** — Inspecter directement dans le DOM :
-- Badge PS5 / PS4 (petit badge bleu/blanc sur les covers)
-- Badge PS+ Extra (étoile + texte "EXTRA")
-- Badge PS+ Premium
-- Icône manette PlayStation
-- Notation / étoiles si présentes
-
-Pour chaque icône : clic droit → "Inspecter" → chercher `<img src="...">` ou `<svg>...</svg>` dans le DOM
-
-**4. Cards jeux** — Inspecter une carte jeu dans les résultats de recherche :
-- Border-radius exact
-- Padding
-- Ombre (box-shadow)
-- Disposition cover / titre / prix
-
-**5. Header et navigation** — Inspecter la barre de navigation PSN mobile :
-- Hauteur
-- Couleur de fond
-- Icônes de navigation
-
-### Ce qu'on fera avec ces assets
-
-Une fois les assets récupérés, on refera l'app complète :
-- Remplacer les CSS variables actuelles par les valeurs PSN exactes
-- Intégrer les vraies icônes PS+ dans `GameCard` (P3)
-- Refaire les badges plateforme (PS5/PS4) avec le style PSN
-- Refaire les `ProductRow` dans la recherche pour matcher le style PSN
-- Refaire le `TabBar` pour matcher la navigation PSN
-
-**Ce n'est PAS un redesign from scratch** — on garde la structure de l'app, on remplace juste le skin visuel par le skin PSN officiel.
-
----
-
-## Bug ouvert — Démos sans recherche ❌
-
-### Symptôme
-Filtre "Démo PS5" sans query → rien ne s'affiche.
-
-### Root cause
-La route `/api/demos` essaie :
-1. Pages catégorie PSN (`/pages/demos`, `/pages/game-demos`) → **échec** : ces pages sont CSR (client-side rendering), `__NEXT_DATA__` ne contient pas les produits.
-2. Recherches parallèles ("démo", "demo", "trial", "gratuit") → **quasi-échec** : PSN FR retourne très peu (0-1) de produits classifiés `DEMO` pour ces termes génériques.
-
-### Ce qui marche encore
-Quand l'utilisateur tape un titre (ex: "Baldur's Gate"), les démos de ce jeu apparaissent dans les résultats via `results.demos`. C'est fiable.
-
-### Pistes à explorer
-**Option A** — Trouver la vraie URL PSN pour les démos (investigation manuelle) :
-- Ouvrir `https://store.playstation.com/fr-fr/pages/demos` dans un navigateur
-- Inspecter le code source (Cmd+U ou DevTools → Network)
-- Chercher les appels XHR/fetch vers des endpoints PSN → trouver un endpoint JSON listings
-- L'URL type non-documentée PSN ressemble à : `https://store.playstation.com/store/api/11/chihiro/00_09_000/fr/FR/select/...`
-
-**Option B** — Fallback hardcodé (si A échoue) :
-Quand filtre=DEMO sans query : afficher une liste hardcodée de démos PS5 populaires connues (Final Fantasy XVI, Spider-Man 2, Hogwarts Legacy, etc.) en les recherchant dynamiquement.
-
----
-
-## Feature P3 — Indicateurs PS+ Extra / Premium
-
-### Vision
-PS+ (PlayStation Plus) est le service d'abonnement de Sony. Il a 3 tiers :
-- **Essential** : jeux mensuels offerts uniquement
-- **Extra** : accès à un catalogue de ~400 jeux PS5/PS4 (inclus dans l'abonnement)
-- **Premium** : accès Extra + jeux PS1/PS2/PS3 classiques + cloud streaming
-
-**Ce qu'on veut** : sur chaque carte jeu dans la liste, afficher si ce jeu est **actuellement inclus dans PS+ Extra ou Premium**. Et notifier l'utilisateur quand un jeu de sa wishlist ENTRE dans le catalogue PS+ (transition : "pas inclus" → "inclus").
-
-PSN expose déjà ce champ dans les données qu'on scrape — c'est `psPlusTier` dans le prix (`EXTRA`, `PREMIUM`, ou absent). L'info est **déjà disponible** dans nos données, il faut juste :
-1. L'afficher sur les GameCard
-2. La persister en DB pour détecter les changements
-
-### Plan technique
-**Migration Neon** (exécuter dans Neon SQL Editor sur neon.tech) :
-```sql
-ALTER TABLE games ADD COLUMN ps_tier TEXT DEFAULT NULL;
-```
-
-**Fichiers à modifier** :
-- `lib/types.ts` → ajouter `ps_tier?: string | null` à `Game`
-- `components/GameCard.tsx` → afficher badge "PS+ Extra" ou "PS+ Premium" si `fr?.psPlusTier`
-- `app/api/push/cron/route.ts` → détecter quand `currentTier != null && game.ps_tier == null` → push notification
-- `app/api/games/[id]/route.ts` → PATCH pour mettre à jour `ps_tier`
-
-**Pas besoin de scraping supplémentaire** — `psPlusTier` est déjà dans `PriceResult.fr.psPlusTier`.
-
----
-
-## Feature P4 — Import masse depuis PSN (style SongShift)
-
-### Vision
-**SongShift** est une app iOS qui transfère des playlists entières entre services musicaux (Spotify → Apple Music etc.). Paul veut l'équivalent pour PSN : importer **toute sa wishlist PSN** en une seule action, pas jeu par jeu.
-
-PSN wishlist = liste de souhaits dans le compte PSN de l'utilisateur, accessible sur `store.playstation.com`.
-
-### Option A — Bookmarklet web (recommandé en premier, import en masse)
-**Principe** : l'utilisateur va sur `store.playstation.com/fr-fr/wishlist` dans Safari → tape un favori bookmarklet → le script lit tous les jeux visibles et les envoie à notre app.
-
-**Implémentation** :
-1. Page `app/[slug]/import/page.tsx` → instructions + code bookmarklet à copier
-2. Le bookmarklet (JS minifié) lit `window.__NEXT_DATA__` sur la page wishlist PSN et extrait les IDs/titres de tous les jeux
-3. POST vers `/api/import?slug=[slug]` avec `{ games: [{ id, title }, ...] }`
-4. `/api/import/route.ts` → insert en masse, ignore doublons
-
-**Défi principal** : trouver les bons sélecteurs/clés Apollo dans `__NEXT_DATA__` sur la page wishlist PSN. Nécessite d'inspecter manuellement le code source de `store.playstation.com/fr-fr/wishlist`.
-
-### Option B — iOS Raccourcis (jeu par jeu, plus simple)
-**Principe** : partager un jeu depuis l'app PSN iOS → Raccourci intercepte → ouvre notre app avec l'URL PSN.
-
-1. Page `app/[slug]/add/page.tsx` → reçoit `?psn_url=...` → parse l'ID produit PSN → appelle `/api/prices` → affiche confirmation → ajoute
-2. L'utilisateur configure un Raccourci iOS une fois pour toutes
-
-**Recommandation** : implémenter les DEUX. Option B d'abord (2h de dev), Option A ensuite (import masse, 1 jour).
-
-### API à créer
-```
-POST /api/import?slug=...
-Body: { games: [{ title: string, fr_product_id: string }] }
-Response: { added: number, skipped: number }
-```
-
----
-
-## Fichiers importants à lire au démarrage
-
-```
-lib/psn-scraper.ts        — scraping PSN
-lib/game-matcher.ts       — matchProducts, matchBySuffix
-lib/types.ts              — PSNProduct, PriceResult, Game
-lib/db.ts                 — getSql() → Neon client (PAS supabase)
-app/api/prices/route.ts   — logique principale fetch prix FR+KR
-app/api/search/route.ts   — recherche FR+KR parallèle
-app/api/demos/route.ts    — browse démos (BUG : retourne vide)
-app/[slug]/search/page.tsx — page recherche complète
-components/GameCard.tsx   — carte jeu dans la liste
-components/GameList.tsx   — liste + header + toggle currency
-```
-
----
-
-## Règles importantes à respecter
+## Règles importantes
 
 1. **Toujours répondre en français**, même pendant le debug technique
-2. **Pas de notifications email** — web push VAPID uniquement
+2. **L'app existante reste intacte** — ne rien supprimer, ne rien casser
 3. **Pas de fond sombre ni violet** dans le design
 4. **Exécuter de façon autonome** — pas de demande de validation entre les tâches
-5. **Commit + push après chaque bloc de changements** (Vercel déploie automatiquement)
-6. **Design** : iOS-native feel, pas de bordures côté gauche colorées, pas de gradient text
-7. **DB = Neon** — ne jamais utiliser `lib/supabase.ts` (code mort) ni le client Supabase
+5. **Commit + push après chaque bloc** (Vercel déploie automatiquement)
+6. **DB = Neon** — ne jamais utiliser `lib/supabase.ts`
+7. **Test terrain avant code** — valider chaque hypothèse dans la console PSN avant d'implémenter
