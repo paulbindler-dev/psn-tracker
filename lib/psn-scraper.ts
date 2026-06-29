@@ -42,6 +42,17 @@ export async function fetchProductById(
   return products.find((p) => p.id === productId) ?? null
 }
 
+/** Fetch any PSN store URL and parse its embedded product data. */
+export async function fetchPSNUrl(url: string, region: 'fr-fr' | 'ko-kr' = 'fr-fr'): Promise<PSNProduct[]> {
+  const lang = region === 'fr-fr' ? 'fr-FR' : 'ko-KR'
+  const res = await fetch(url, {
+    headers: { ...PSN_HEADERS, 'Accept-Language': lang },
+    next: { revalidate: 3600 },
+  })
+  if (!res.ok) return []
+  return parseNextDataHtml(await res.text())
+}
+
 export function parseNextDataHtml(html: string): PSNProduct[] {
   const match = html.match(
     /<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/

@@ -163,6 +163,7 @@ export default function SlugSearchPage() {
   const [toast, setToast] = useState<string | null>(null)
   const [browseDemos, setBrowseDemos] = useState<PSNProduct[]>([])
   const [browseLoading, setBrowseLoading] = useState(false)
+  const browseFetchedRef = useRef(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mainRef = useRef<HTMLDivElement>(null)
 
@@ -236,14 +237,15 @@ export default function SlugSearchPage() {
   // Auto-load demos when DEMO filter selected with no active search query
   useEffect(() => {
     if (filter !== 'DEMO' || query.trim()) return
-    if (browseDemos.length > 0 || browseLoading) return
+    if (browseFetchedRef.current) return
+    browseFetchedRef.current = true
     setBrowseLoading(true)
     fetch('/api/demos')
       .then(r => r.ok ? r.json() : { demos: [] })
       .then(d => setBrowseDemos(d.demos ?? []))
       .catch(() => {})
       .finally(() => setBrowseLoading(false))
-  }, [filter, query, browseDemos.length, browseLoading])
+  }, [filter, query])
 
   const prevFilter = useRef<ViewFilter>('all')
   useEffect(() => { prevFilter.current = filter }, [filter])
